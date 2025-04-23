@@ -4,7 +4,7 @@ use time::{Duration};
 use reqwest::{Client, Result};
 use serde_json::json;
 use tokio;
-use chrono::{self, DateTime};
+use chrono;
 
 #[derive(Deserialize, Debug, Clone)]
 struct FrontEntry {
@@ -37,6 +37,7 @@ struct Config {
     vrchat_base_url: String,
     client: Client,
     run_once: bool,
+    wait_seconds: u64,
 }
 
 
@@ -53,7 +54,7 @@ async fn get_fronter_names(front_entries: Vec<FrontEntry>, config: &Config) -> R
         .header("Authorization", &config.sps_token)
         .send()
         .await?;
-    eprintln!("Received response (status: {})", members_response.status());
+    eprintln!("Status: {}", members_response.status());
 
     let members: Vec<Member> = members_response.error_for_status()?.json().await?;
 
@@ -78,13 +79,12 @@ async fn fetch_fronts_and_transfer_to_vrchat(config: &Config) -> Result<()> {
         .header("Authorization", &config.sps_token)
         .send()
         .await?;
-    eprintln!("Received response (status: {})", fronts_response.status());
+    eprintln!("Status: {}", fronts_response.status());
     
     let front_entries: Vec<FrontEntry> = fronts_response
         .error_for_status()?
         .json()
         .await?;
-    eprintln!("Parsed {} front entries.", front_entries.len());
 
     let fronter_ids: Vec<&String> = front_entries.iter().map(|e| &e.content.member).collect();
     eprintln!("Fronter IDs: {:?}", fronter_ids);
@@ -150,9 +150,13 @@ async fn main() -> Result<()> {
 
     loop {
         eprintln!("\n\n======================= UTC {}",chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
+        
         fetch_fronts_and_transfer_to_vrchat(&config).await?;
+        
         if config.run_once { break; }
-        thread::sleep(Duration::from_secs(60));
+
+        eprintln!("Waiting {}s for next update trigger...", config.wait_seconds);
+        thread::sleep(Duration::from_secs(config.wait_seconds));
     }
 
     Ok(())
@@ -168,6 +172,11 @@ async fn load_config() -> Result<Config> {
     eprintln!("Credentials loaded. VRCHAT_USERNAME is {}", vrchat_username);
 
     let run_once = env::var("RUN_ONCE").expect("RUN_ONCE not set.");
+
+    let wait_seconds = env::var("SECONDS_BETWEEN_UPDATES")
+        .expect("SECONDS_BETWEEN_UPDATES not set.")
+        .parse::<u64>()
+        .unwrap();
     
     let sps_base_url = env::var("SPS_API_BASE_URL")
     .unwrap_or_else(|_| "https://api.apparyllis.com/v1".to_string());
@@ -189,6 +198,7 @@ async fn load_config() -> Result<Config> {
         sps_base_url,
         vrchat_base_url,
         run_once: str::eq(&run_once, "true"),
+        wait_seconds,
         client,
     })
 }

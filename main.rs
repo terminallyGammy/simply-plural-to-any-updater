@@ -26,6 +26,7 @@ struct Member {
 #[derive(Deserialize, Debug, Clone)]
 struct MemberContent {
     name: String,
+    avatarUrl: String,
 }
 
 #[derive(Debug, Clone)]
@@ -42,7 +43,7 @@ struct Config {
 
 
 
-async fn get_fronter_names(front_entries: Vec<FrontEntry>, config: &Config) -> Result<Vec<String>> {
+async fn get_fronters_info(front_entries: Vec<FrontEntry>, config: &Config) -> Result<Vec<MemberContent>> {
     let system_id = &front_entries[0].content.uid;
     let front_uids: Vec<String>  = front_entries.iter().map(|e| e.content.member.clone()).collect();
 
@@ -58,14 +59,16 @@ async fn get_fronter_names(front_entries: Vec<FrontEntry>, config: &Config) -> R
 
     let members: Vec<Member> = members_response.error_for_status()?.json().await?;
 
-    let fronting_member_names: Vec<String> = members
+    let fronting_members: Vec<MemberContent> = members
         .into_iter()
         .filter(|m| front_uids.contains(&m.id))
-        .map(|m| m.content.name)
+        .map(|m| {
+            eprintln!("Fronting member: {:?}",m.content);
+            m.content
+        })
         .collect();
-    eprintln!("Fronting member names: {:?}", fronting_member_names);
 
-    return Ok(fronting_member_names);
+    return Ok(fronting_members);
 }   
 
 
@@ -89,11 +92,10 @@ async fn fetch_fronts_and_transfer_to_vrchat(config: &Config) -> Result<()> {
     let fronter_ids: Vec<&String> = front_entries.iter().map(|e| &e.content.member).collect();
     eprintln!("Fronter IDs: {:?}", fronter_ids);
 
-    let fronts: Vec<String> = if fronter_ids.is_empty() { vec![] } else { get_fronter_names(front_entries, config).await? };
+    let fronts: Vec<MemberContent> = if fronter_ids.is_empty() { vec![] } else { get_fronters_info(front_entries, config).await? };
 
     // Print members for reading from terminal
-    fronts.into_iter().for_each(|name| println!("{}",name));
-
+    fronts.into_iter().for_each(|m| println!("{} ### {}",m.name,m.avatarUrl));
 
     // // Format status as "F: <fronter1>, <fronter2>, ..."
     // let status_desc = if front_names.is_empty() {

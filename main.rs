@@ -6,44 +6,45 @@ use serde_json::json;
 use tokio;
 use chrono;
 
-#[derive(Deserialize, Debug, Clone)]
-struct FrontEntry {
-    content: FrontEntryContent,
-}
 
-#[derive(Deserialize, Debug, Clone)]
-struct FrontEntryContent {
-    member: String, // member ID
-    uid: String, // System ID
-}
+#[tokio::main]
+async fn main() -> Result<()> {
+    eprintln!("Starting VRChat SPS status updater...");
 
-#[derive(Deserialize, Debug, Clone)]
-struct Member {
-    content: MemberContent,
-    id: String, // member id
-}
+    let config = load_config().await?;
 
-#[derive(Deserialize, Debug, Clone)]
-struct MemberContent {
-    name: String,
-    avatarUrl: String,
-}
+    if config.serve_api {
+        // todo. start server and on each request:
+        let fronts = fetch_fronts(&config).await?;
+        let html = generate_html(&config, fronts);
 
-#[derive(Debug, Clone)]
-struct Config {
-    sps_token: String,
-    vrchat_username: String,
-    vrchat_password: String,
-    sps_base_url: String,
-    vrchat_base_url: String,
-    client: Client,
-    run_once: bool,
-    wait_seconds: u64,
+        println!("{}",html);
+
+        Ok(())
+    }
+    else {
+        update_vrchat_status_fronts_loop(&config).await
+    }
 }
 
 
 
-async fn get_fronters_info(front_entries: Vec<FrontEntry>, config: &Config) -> Result<Vec<MemberContent>> {
+async fn update_vrchat_status_fronts_loop(config: &Config) -> Result<()>{
+    loop {
+        eprintln!("\n\n======================= UTC {}",chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
+
+        let fronts = fetch_fronts(&config).await?;
+        
+        update_fronts_in_vrchat_status(&config, fronts).await?;
+        
+        eprintln!("Waiting {}s for next update trigger...", config.wait_seconds);
+        thread::sleep(Duration::from_secs(config.wait_seconds));
+    }
+}
+
+
+
+async fn enrich_fronter_ids_with_member_info(front_entries: Vec<FrontEntry>, config: &Config) -> Result<Vec<MemberContent>> {
     let system_id = &front_entries[0].content.uid;
     let front_uids: Vec<String>  = front_entries.iter().map(|e| e.content.member.clone()).collect();
 
@@ -72,7 +73,9 @@ async fn get_fronters_info(front_entries: Vec<FrontEntry>, config: &Config) -> R
 }   
 
 
-async fn fetch_fronts_and_transfer_to_vrchat(config: &Config) -> Result<()> {
+
+
+async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
     // 1. Fetch current fronts from Simply Plural
     let fronts_url = format!("{}/fronters", &config.sps_base_url);
     eprintln!("Fetching fronts from SPS: {}", fronts_url);
@@ -92,11 +95,15 @@ async fn fetch_fronts_and_transfer_to_vrchat(config: &Config) -> Result<()> {
     let fronter_ids: Vec<&String> = front_entries.iter().map(|e| &e.content.member).collect();
     eprintln!("Fronter IDs: {:?}", fronter_ids);
 
-    let fronts: Vec<MemberContent> = if fronter_ids.is_empty() { vec![] } else { get_fronters_info(front_entries, config).await? };
+    let fronts: Vec<MemberContent> = if fronter_ids.is_empty() { vec![] } else { enrich_fronter_ids_with_member_info(front_entries, config).await? };
 
-    // Print members for reading from terminal
-    fronts.into_iter().for_each(|m| println!("{} ### {}",m.name,m.avatarUrl));
+    Ok(fronts)
+}
 
+
+
+
+async fn update_fronts_in_vrchat_status(config: &Config, fronts: Vec<MemberContent>) -> Result<()> {
     // // Format status as "F: <fronter1>, <fronter2>, ..."
     // let status_desc = if front_names.is_empty() {
     //     eprintln!("No fronts found.");
@@ -143,26 +150,29 @@ async fn fetch_fronts_and_transfer_to_vrchat(config: &Config) -> Result<()> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    eprintln!("Starting VRChat SPS status updater...");
 
-    // Load configuration
-    let config = load_config().await?;
 
-    loop {
-        eprintln!("\n\n======================= UTC {}",chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
-        
-        fetch_fronts_and_transfer_to_vrchat(&config).await?;
-        
-        if config.run_once { break; }
 
-        eprintln!("Waiting {}s for next update trigger...", config.wait_seconds);
-        thread::sleep(Duration::from_secs(config.wait_seconds));
-    }
 
-    Ok(())
+fn generate_html(config: &Config, fronts: Vec<MemberContent>) -> String {
+    let fronts_formatted = fronts
+        .into_iter()
+        .map(|m| -> String { format!("<p>{}</p><p><img src=\"{}\" /></p>",html_escape::encode_text(&m.name),m.avatarUrl)})
+        .collect::<Vec<String>>()
+        .join("<hr />");
+
+    format!(r#"<html>
+    <head>
+        <title>{} - Fronting Status</title>
+    </head>
+    <body>
+        {}
+    </body>
+</html>"#, html_escape::encode_text(&config.system_name), fronts_formatted)
 }
+
+
+
 
 async fn load_config() -> Result<Config> {
     eprintln!("Loading environment variables...");
@@ -173,7 +183,10 @@ async fn load_config() -> Result<Config> {
     
     eprintln!("Credentials loaded. VRCHAT_USERNAME is {}", vrchat_username);
 
-    let run_once = env::var("RUN_ONCE").expect("RUN_ONCE not set.");
+    let serve_api = env::var("SERVE_API").expect("SERVE_API not set.");
+
+    let system_name = env::var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.");
+    
 
     let wait_seconds = env::var("SECONDS_BETWEEN_UPDATES")
         .expect("SECONDS_BETWEEN_UPDATES not set.")
@@ -199,8 +212,46 @@ async fn load_config() -> Result<Config> {
         vrchat_password,
         sps_base_url,
         vrchat_base_url,
-        run_once: str::eq(&run_once, "true"),
+        serve_api: str::eq(&serve_api, "true"),
+        system_name,
         wait_seconds,
         client,
     })
+}
+
+
+#[derive(Deserialize, Debug, Clone)]
+struct FrontEntry {
+    content: FrontEntryContent,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct FrontEntryContent {
+    member: String, // member ID
+    uid: String, // System ID
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct Member {
+    content: MemberContent,
+    id: String, // member id
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct MemberContent {
+    name: String,
+    avatarUrl: String,
+}
+
+#[derive(Debug, Clone)]
+struct Config {
+    sps_token: String,
+    vrchat_username: String,
+    vrchat_password: String,
+    sps_base_url: String,
+    vrchat_base_url: String,
+    client: Client,
+    serve_api: bool,
+    wait_seconds: u64,
+    system_name: String,
 }

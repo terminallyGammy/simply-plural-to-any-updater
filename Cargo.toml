@@ -1,11 +1,11 @@
 [package]
-name = "vrchat_sps_status"
+name = "sps_status"
 version = "0.1.0"
 edition = "2021"
 
 # Define the binary target
 [[bin]]
-name = "vrchat_sps_status"
+name = "sps_status"
 path = "main.rs"
 
 [dependencies]

@@ -1,0 +1,16 @@
+services:
+  sps-status:
+    build:
+      dockerfile: Dockerfile
+      context: "."
+    image: "sps-status:latest"
+    container_name: sps-status
+    env_file:
+      - deploy.env
+    restart: always
+    networks:
+      - sps-status
+
+networks:
+  sps-status:
+    name: sps-status

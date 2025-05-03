@@ -8,5 +8,5 @@ echo "Done."
 
 echo "Run:"
 set -a; source .env; set +a
-./target/release/vrchat_sps_status
+./target/release/sps_status
 

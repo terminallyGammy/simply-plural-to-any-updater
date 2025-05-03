@@ -9,5 +9,5 @@ echo "Done."
 echo "Run:"
 set -a; source .env; set +a
 export SERVE_API=true
-./target/release/vrchat_sps_status
+./target/release/sps_status
 

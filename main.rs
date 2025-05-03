@@ -1,7 +1,11 @@
+#[macro_use] extern crate rocket;
+
+use rocket::{response::{self, content::RawHtml}, State};
 use serde::Deserialize;
 use std::{env, fmt::Debug, thread, time, vec};
-use time::{Duration};
-use reqwest::{Client, Result};
+use time::Duration;
+use reqwest::Client;
+use anyhow::{Error, Result};
 use serde_json::json;
 use tokio;
 use chrono;
@@ -14,17 +18,35 @@ async fn main() -> Result<()> {
     let config = load_config().await?;
 
     if config.serve_api {
-        // todo. start server and on each request:
-        let fronts = fetch_fronts(&config).await?;
-        let html = generate_html(&config, fronts);
-
-        println!("{}",html);
-
-        Ok(())
+        start_server(&config).await?
     }
     else {
-        update_vrchat_status_fronts_loop(&config).await
+        update_vrchat_status_fronts_loop(&config).await?
     }
+
+    Ok(())
+}
+
+
+
+async fn start_server(config: &Config) -> Result<()> {
+    rocket::build()
+        .manage(config.clone())
+        .mount("/", routes![rest_get_fronting])
+        .launch()
+        .await
+        .map_err(|e| anyhow::anyhow!("Rocket failed with: {}",e))
+        .map(|_| ())
+}
+
+
+
+#[get("/fronting")]
+async fn rest_get_fronting(config: &State<Config>) -> Result<RawHtml<String>, response::Debug<Error>> {
+    let fronts = fetch_fronts(&config).await?;
+    let html = generate_html(&config, fronts);
+
+    Ok( RawHtml(html) )
 }
 
 
@@ -157,13 +179,62 @@ async fn update_fronts_in_vrchat_status(config: &Config, fronts: Vec<MemberConte
 fn generate_html(config: &Config, fronts: Vec<MemberContent>) -> String {
     let fronts_formatted = fronts
         .into_iter()
-        .map(|m| -> String { format!("<p>{}</p><p><img src=\"{}\" /></p>",html_escape::encode_text(&m.name),m.avatarUrl)})
+        .map(|m| -> String {
+            format!("<div><img src=\"{}\" /><p>{}</p></div>",m.avatarUrl,html_escape::encode_text(&m.name))
+        })
         .collect::<Vec<String>>()
-        .join("<hr />");
+        .join("\n");
 
     format!(r#"<html>
     <head>
         <title>{} - Fronting Status</title>
+        <style>
+            /* generated with ChatGPT o3 */
+            /* --- layout container ------------------------------------ */
+            body{{
+                margin:0;
+                padding:1rem;
+                font-family:sans-serif;
+                display:flex;
+                flex-direction: column;
+                gap:1rem;
+            }}
+
+            /* --- one card -------------------------------------------- */
+            body>div {{
+                flex:1 1 calc(25% - 1rem);   /* ≤4 cards per row */
+                display:flex;
+                align-items:center;
+                gap:.75rem;
+                padding:.75rem;
+                background:#fff;
+                border-radius:.5rem;
+                box-shadow:0 2px 4px rgba(0,0,0,.08);
+            }}
+
+            /* --- avatar image ---------------------------------------- */
+            body>div img {{
+                width:10rem;
+                height:10rem;           /* fixed square keeps things tidy */
+                object-fit:cover;
+                border-radius:50%;
+            }}
+
+            /* --- name ------------------------------------------------- */
+            body>div p {{
+                margin:0;
+                font-size: 3rem;
+                font-weight:600;
+            }}
+
+            /* --- phones & tablets ------------------------------------ */
+            @media (max-width:800px) {{
+                body>div {{flex:1 1 calc(50% - 1rem);}}   /* 2-across */
+            }}
+            @media (max-width:420px) {{
+                body>div {{flex:1 1 100%;}}               /* stack */
+            }}
+        </style>
     </head>
     <body>
         {}

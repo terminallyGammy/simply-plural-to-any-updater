@@ -9,8 +9,9 @@ services:
       - deploy.env
     restart: always
     networks:
-      - sps-status
+      - sps-status-net
 
 networks:
-  sps-status:
-    name: sps-status
+  sps-status-net:
+    name: sps-status-net
+    driver: bridge

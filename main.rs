@@ -1,15 +1,19 @@
 #[macro_use] extern crate rocket;
 
-use rocket::{response::{self, content::RawHtml}, State};
+use rocket::{futures::stream::iter, response::{self, content::RawHtml}, State};
 use serde::Deserialize;
-use std::{env, fmt::Debug, thread, time, vec};
+use vrchatapi::{apis::authentication_api, models::{user, EitherUserOrTwoFactor, TwoFactorAuthCode, TwoFactorEmailCode, UpdateUserRequest}};
+use vrchatapi::apis::configuration::Configuration;
+use std::{env, fmt::Debug, io::{self, Write}, string::String, thread, time, vec};
 use time::Duration;
 use reqwest::Client;
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use serde_json::json;
 use tokio;
 use chrono;
 
+const VRCHAT_UPDATER_USER_AGENT: &str = concat!("SimplyPluralToVRChatUpdater/0.1.0 golly.ticker","@","gmail.com");
+// the email is written in a slightly obfuscated way for automatic scrapers to not find it.
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -52,12 +56,14 @@ async fn rest_get_fronting(config: &State<Config>) -> Result<RawHtml<String>, re
 
 
 async fn update_vrchat_status_fronts_loop(config: &Config) -> Result<()>{
+    let (vrchat_config, user_id) = authenticate_vrchat(config).await?;
+
     loop {
         eprintln!("\n\n======================= UTC {}",chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
 
         let fronts = fetch_fronts(&config).await?;
         
-        update_fronts_in_vrchat_status(&config, fronts).await?;
+        update_fronts_in_vrchat_status(&config, &vrchat_config, &user_id, fronts).await?;
         
         eprintln!("Waiting {}s for next update trigger...", config.wait_seconds);
         thread::sleep(Duration::from_secs(config.wait_seconds));
@@ -125,55 +131,70 @@ async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
 
 
 
-async fn update_fronts_in_vrchat_status(config: &Config, fronts: Vec<MemberContent>) -> Result<()> {
-    // // Format status as "F: <fronter1>, <fronter2>, ..."
-    // let status_desc = if front_names.is_empty() {
-    //     eprintln!("No fronts found.");
-    //     "F: none?".to_string()
-    // } else {
-    //     let desc = format!("F: {}", front_names.join(", "));
-    //     eprintln!("Formatted statusDescription: {}", desc);
-    //     desc
-    // };
+async fn update_fronts_in_vrchat_status(config: &Config, vrchat_config: &Configuration, user_id: &String, fronts: Vec<MemberContent>) -> Result<()> {
+    
+    // 1. Build elements of status string
+    let status_strings = if fronts.is_empty() {
+        vec![&config.vrchat_updater_prefix, &config.vrchat_updater_no_fronts]
+    } else {
+        let member_names = fronts.iter().map(|m|&m.name).collect();
+        vec![vec![&config.vrchat_updater_prefix], member_names].concat()
+    };
+    eprintln!("Status string elements: {:?}", status_strings);
 
-    // // 2. Authenticate with VRChat
-    // let auth_url = format!("{}/auth/user", vr_base);
-    // eprintln!("Authenticating with VRChat: {}", auth_url);
-    // let auth_response = client
-    //     .get(&auth_url)
-    //     .basic_auth(&vr_username, Some(&vr_password))
-    //     .send()
-    //     .await?;
-    // eprintln!("Authenticated (status: {})", auth_response.status());
-    // let auth_json: serde_json::Value = auth_response
-    //     .error_for_status()?
-    //     .json()
-    //     .await?;
-    // let user_id = auth_json["id"].as_str().expect("Missing user ID");
-    // eprintln!("Retrieved user ID: {}", user_id);
+    let mut update_request = UpdateUserRequest::new();
 
-    // // 3. Update VRChat status
-    // let update_url = format!("{}/users/{}", vr_base, user_id);
-    // eprintln!("Updating VRChat status at: {}", update_url);
-    // let update_payload = json!({
-    //     "status": "active",
-    //     "statusDescription": status_desc,
-    // });
-    // eprintln!("Payload: {}", update_payload);
-    // let update_response = client
-    //     .put(&update_url)
-    //     .basic_auth(&vr_username, Some(&vr_password))
-    //     .json(&update_payload)
-    //     .send()
-    //     .await?;
-    // eprintln!("Update response status: {}", update_response.status());
+    // todo. continue here. test the max length of status messages in vrchat. then ensure, that the string is of that length. also ensure, that only the allowed characters are in the status.
+    update_request.status_description = Some(chrono::Utc::now().format("%S").to_string());
+    
+    // Uses https://vrchatapi.github.io/docs/api/ PUT Update User Info
+    vrchatapi::apis::users_api::update_user(vrchat_config, &user_id, Some(update_request)).await?;
 
-    // eprintln!("VRChat status updated successfully.");
+    eprintln!("VRChat status updated successfully.");
+
     Ok(())
 }
 
 
 
+// Find examples in https://github.com/vrchatapi/vrchatapi-rust
+async fn authenticate_vrchat(config: &Config) -> Result<(Configuration,String)> {
+    let mut vrchat_config = vrchatapi::apis::configuration::Configuration::default();
+    vrchat_config.user_agent = Some(VRCHAT_UPDATER_USER_AGENT.to_string());
+    vrchat_config.basic_auth = Some((config.vrchat_username.clone(), Some(config.vrchat_password.clone())));
+
+    // Either re-use the cookie or authenticate on the first request.
+    match authentication_api::get_current_user(&vrchat_config)
+        .await
+        .unwrap()
+    {
+        vrchatapi::models::EitherUserOrTwoFactor::CurrentUser(_me) => {
+            // this case of an already authenticated cookie shouldn't happen, as we freshly create the config above
+            true
+        }
+        vrchatapi::models::EitherUserOrTwoFactor::RequiresTwoFactorAuth(requires_auth) => {
+            if requires_auth.requires_two_factor_auth.contains(&String::from("emailOtp"))
+            {
+                let code = read_user_input(&format!("Your account {} has received an Email with a 2FA code. Please enter it: ", config.vrchat_username));
+                authentication_api::verify2_fa_email_code(&vrchat_config,TwoFactorEmailCode::new(code)).await?.verified
+            } else {
+                let code = read_user_input(&format!("Please enter your Authenticator 2FA code for the account {}:", config.vrchat_username));
+                authentication_api::verify2_fa(&vrchat_config, TwoFactorAuthCode::new(code)).await?.verified
+            }
+        }
+    };
+
+    // Test, if the authentication is working
+    let test_authentication = match authentication_api::get_current_user(&vrchat_config)
+        .await
+        .unwrap()
+    {
+        EitherUserOrTwoFactor::CurrentUser(user) => Ok(user.id),
+        EitherUserOrTwoFactor::RequiresTwoFactorAuth(_) => Err(anyhow!("Cookie invalid for user {}", config.vrchat_username)),
+    };
+
+    test_authentication.map(|user_id| (vrchat_config, user_id))
+}
 
 
 fn generate_html(config: &Config, fronts: Vec<MemberContent>) -> String {
@@ -244,6 +265,18 @@ fn generate_html(config: &Config, fronts: Vec<MemberContent>) -> String {
 
 
 
+fn read_user_input(prompt: &str) -> String {
+    print!("{}", prompt);
+    io::stdout().flush().expect("Failed to flush stdout");
+
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
+
+    input.trim().to_string()
+}
+
 
 async fn load_config() -> Result<Config> {
     eprintln!("Loading environment variables...");
@@ -256,11 +289,12 @@ async fn load_config() -> Result<Config> {
     
     let vrchat_username = optional_vrchat_config.clone().or(env::var("VRCHAT_USERNAME")).expect("VRCHAT_USERNAME not set");
     let vrchat_password = optional_vrchat_config.clone().or(env::var("VRCHAT_PASSWORD")).expect("VRCHAT_PASSWORD not set");
-    
     eprintln!("Credentials loaded. VRCHAT_USERNAME is {}", vrchat_username);
 
     let system_name = env::var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.");
-    
+
+    let vrchat_updater_prefix = env::var("VRCHAT_UPDATER_PREFIX").expect("VRCHAT_UPDATER_PREFIX not set.");
+    let vrchat_updater_no_fronts = env::var("VRCHAT_UPDATER_NO_FRONTS").expect("VRCHAT_UPDATER_NO_FRONTS not set.");
 
     let wait_seconds = env::var("SECONDS_BETWEEN_UPDATES")
         .expect("SECONDS_BETWEEN_UPDATES not set.")
@@ -269,8 +303,6 @@ async fn load_config() -> Result<Config> {
     
     let sps_base_url = env::var("SPS_API_BASE_URL").expect("SPS_API_BASE_URL not set.");
     eprintln!("Using SPS base URL: {}", sps_base_url);
-    let vrchat_base_url = env::var("VRCHAT_API_BASE_URL").expect("VRCHAT_API_BASE_URL not set.");
-    eprintln!("Using VRChat base URL: {}", vrchat_base_url);
 
     // Build HTTP client
     let client = Client::builder()
@@ -282,8 +314,9 @@ async fn load_config() -> Result<Config> {
         sps_token,
         vrchat_username,
         vrchat_password,
+        vrchat_updater_prefix,
+        vrchat_updater_no_fronts,
         sps_base_url,
-        vrchat_base_url,
         serve_api,
         system_name,
         wait_seconds,
@@ -321,9 +354,10 @@ struct Config {
     vrchat_username: String,
     vrchat_password: String,
     sps_base_url: String,
-    vrchat_base_url: String,
     client: Client,
     serve_api: bool,
     wait_seconds: u64,
     system_name: String,
+    vrchat_updater_prefix: String,
+    vrchat_updater_no_fronts: String,
 }

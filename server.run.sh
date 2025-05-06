@@ -7,7 +7,7 @@ cargo build --release
 echo "Done."
 
 echo "Run:"
-set -a; source .env; set +a
-export SERVE_API=true
+set -a; source defaults.env; set +a
+set -a; source dev.server.env; set +a
 ./target/release/sps_status
 

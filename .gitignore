@@ -1,4 +1,5 @@
-.env
+dev.server.env
+dev.vrcupdater.env
 target
 example.html
 deploy.env

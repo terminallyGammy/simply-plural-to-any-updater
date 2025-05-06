@@ -6,6 +6,7 @@ services:
     image: "sps-status:latest"
     container_name: sps-status
     env_file:
+      - defaults.env
       - deploy.env
     restart: always
     networks:

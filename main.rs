@@ -247,14 +247,17 @@ fn generate_html(config: &Config, fronts: Vec<MemberContent>) -> String {
 
 async fn load_config() -> Result<Config> {
     eprintln!("Loading environment variables...");
+    let serve_api = str::eq(&env::var("SERVE_API").expect("SERVE_API not set."), "true");
+    eprintln!("SERVE_API is {}", serve_api);
+
     let sps_token = env::var("SPS_API_TOKEN").expect("SPS_API_TOKEN not set");
+
+    let optional_vrchat_config = if serve_api { Ok("".to_string()) } else { Err("VRChat variables needs configuration.") };
     
-    let vrchat_username = env::var("VRCHAT_USERNAME").expect("VRCHAT_USERNAME not set");
-    let vrchat_password = env::var("VRCHAT_PASSWORD").expect("VRCHAT_PASSWORD not set");
+    let vrchat_username = optional_vrchat_config.clone().or(env::var("VRCHAT_USERNAME")).expect("VRCHAT_USERNAME not set");
+    let vrchat_password = optional_vrchat_config.clone().or(env::var("VRCHAT_PASSWORD")).expect("VRCHAT_PASSWORD not set");
     
     eprintln!("Credentials loaded. VRCHAT_USERNAME is {}", vrchat_username);
-
-    let serve_api = env::var("SERVE_API").expect("SERVE_API not set.");
 
     let system_name = env::var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.");
     
@@ -264,11 +267,9 @@ async fn load_config() -> Result<Config> {
         .parse::<u64>()
         .unwrap();
     
-    let sps_base_url = env::var("SPS_API_BASE_URL")
-    .unwrap_or_else(|_| "https://api.apparyllis.com/v1".to_string());
+    let sps_base_url = env::var("SPS_API_BASE_URL").expect("SPS_API_BASE_URL not set.");
     eprintln!("Using SPS base URL: {}", sps_base_url);
-    let vrchat_base_url = env::var("VRCHAT_API_BASE_URL")
-    .unwrap_or_else(|_| "https://api.vrchat.cloud/api/1".to_string());
+    let vrchat_base_url = env::var("VRCHAT_API_BASE_URL").expect("VRCHAT_API_BASE_URL not set.");
     eprintln!("Using VRChat base URL: {}", vrchat_base_url);
 
     // Build HTTP client
@@ -283,7 +284,7 @@ async fn load_config() -> Result<Config> {
         vrchat_password,
         sps_base_url,
         vrchat_base_url,
-        serve_api: str::eq(&serve_api, "true"),
+        serve_api,
         system_name,
         wait_seconds,
         client,

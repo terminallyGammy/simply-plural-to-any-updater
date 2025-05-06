@@ -1,7 +1,5 @@
-FROM rust:1-bullseye
+FROM ubuntu:latest
 
-COPY Cargo.* *.rs ./
+COPY ./target/release/sps_status ./sps_status
 
-RUN cargo build --release
-
-CMD ["./target/release/sps_status"]
+CMD ["./sps_status"]

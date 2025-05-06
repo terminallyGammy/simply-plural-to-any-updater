@@ -7,6 +7,7 @@ cargo build --release
 echo "Done."
 
 echo "Run:"
-set -a; source .env; set +a
+set -a; source defaults.env; set +a
+set -a; source dev.vrcupdater.env; set +a
 ./target/release/sps_status
 

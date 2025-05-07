@@ -1,19 +1,20 @@
 #[macro_use] extern crate rocket;
 
-use rocket::{futures::stream::iter, response::{self, content::RawHtml}, State};
+use rocket::{response::{self, content::RawHtml}, State};
 use serde::Deserialize;
-use vrchatapi::{apis::authentication_api, models::{user, EitherUserOrTwoFactor, TwoFactorAuthCode, TwoFactorEmailCode, UpdateUserRequest}};
+use vrchatapi::{apis::authentication_api, models::{EitherUserOrTwoFactor, TwoFactorAuthCode, TwoFactorEmailCode, UpdateUserRequest}};
 use vrchatapi::apis::configuration::Configuration;
 use std::{env, fmt::Debug, io::{self, Write}, string::String, thread, time, vec};
 use time::Duration;
 use reqwest::Client;
 use anyhow::{anyhow, Error, Result};
-use serde_json::json;
 use tokio;
 use chrono;
 
-const VRCHAT_UPDATER_USER_AGENT: &str = concat!("SimplyPluralToVRChatUpdater/0.1.0 golly.ticker","@","gmail.com");
+const VRCHAT_UPDATER_USER_AGENT: &str = concat!("SimplyPluralToVRChatUpdater/",env!("CARGO_PKG_VERSION")," golly.ticker","@","gmail.com");
 // the email is written in a slightly obfuscated way for automatic scrapers to not find it.
+
+const VRCHAT_MAX_ALLOWED_STATUS_LENGTH: usize = 23;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -129,30 +130,62 @@ async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
 }
 
 
-
-
 async fn update_fronts_in_vrchat_status(config: &Config, vrchat_config: &Configuration, user_id: &String, fronts: Vec<MemberContent>) -> Result<()> {
     
     // 1. Build elements of status string
-    let status_strings = if fronts.is_empty() {
-        vec![&config.vrchat_updater_prefix, &config.vrchat_updater_no_fronts]
-    } else {
-        let member_names = fronts.iter().map(|m|&m.name).collect();
-        vec![vec![&config.vrchat_updater_prefix], member_names].concat()
-    };
-    eprintln!("Status string elements: {:?}", status_strings);
+    let status_string = format_vrchat_status(config, fronts);
 
+    // 2. Build request
     let mut update_request = UpdateUserRequest::new();
-
-    // todo. continue here. test the max length of status messages in vrchat. then ensure, that the string is of that length. also ensure, that only the allowed characters are in the status.
-    update_request.status_description = Some(chrono::Utc::now().format("%S").to_string());
+    update_request.status_description = Some(status_string.clone());
     
+    // 3. Send status update request to VRChat
     // Uses https://vrchatapi.github.io/docs/api/ PUT Update User Info
-    vrchatapi::apis::users_api::update_user(vrchat_config, &user_id, Some(update_request)).await?;
+    match vrchatapi::apis::users_api::update_user(
+        vrchat_config,
+        &user_id,
+        Some(update_request)
+    ).await
+    {
+        Ok(_) => eprintln!("VRChat status updated successfully to: {}", status_string),
+        Err(err) => eprintln!("VRChat status failed to be updated. Error: {}", err),
+    }
 
-    eprintln!("VRChat status updated successfully.");
-
+    // always return OK. even if request failed. we don't want to abort
     Ok(())
+}
+
+fn format_vrchat_status(config: &Config, fronts: Vec<MemberContent>) -> String {
+    let fronter_strings: Vec<&str> = if fronts.is_empty() {
+        vec![&config.vrchat_updater_no_fronts]
+    } else {
+        // todo. only keep ascii chars.
+        fronts.iter().map(|m|m.name.as_str()).collect()
+    };
+    eprintln!("Status string elements: {:?}", fronter_strings);
+
+    let long_string = format!("{} {}", config.vrchat_updater_prefix.as_str(), fronter_strings.join(", "));
+    let short_string = format!("{}{}", config.vrchat_updater_prefix.as_str(), fronter_strings.join(","));
+    let truncated_string = {
+        let prefix_slice = 0..config.vrchat_updater_truncate_names_to;
+        let truncated_names: Vec<&str> = fronter_strings
+            .iter()
+            .map(|name|name.get(prefix_slice.clone())
+            .unwrap_or_default())
+            .collect();
+        format!("{}{}", config.vrchat_updater_prefix.as_str(), truncated_names.join(","))
+    };
+
+    eprintln!("Long      string: '{}' ({})", long_string, long_string.len());
+    eprintln!("Short     string: '{}' ({})", short_string, short_string.len());
+    eprintln!("Truncated string: '{}' ({})", truncated_string, truncated_string.len());
+
+    // use long string, if possible
+    if long_string.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH { long_string }
+    // otherwise try small string
+    else if short_string.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH { short_string }
+    // if that's also too long, then truncate the names
+    else { truncated_string }
 }
 
 
@@ -295,6 +328,10 @@ async fn load_config() -> Result<Config> {
 
     let vrchat_updater_prefix = env::var("VRCHAT_UPDATER_PREFIX").expect("VRCHAT_UPDATER_PREFIX not set.");
     let vrchat_updater_no_fronts = env::var("VRCHAT_UPDATER_NO_FRONTS").expect("VRCHAT_UPDATER_NO_FRONTS not set.");
+    let vrchat_updater_truncate_names_to = env::var("VRCHAT_UPDATER_TRUNCATE_NAMES_TO")
+        .expect("VRCHAT_UPDATER_TRUNCATE_NAMES_TO not set.")
+        .parse::<usize>()
+        .unwrap();
 
     let wait_seconds = env::var("SECONDS_BETWEEN_UPDATES")
         .expect("SECONDS_BETWEEN_UPDATES not set.")
@@ -316,6 +353,7 @@ async fn load_config() -> Result<Config> {
         vrchat_password,
         vrchat_updater_prefix,
         vrchat_updater_no_fronts,
+        vrchat_updater_truncate_names_to,
         sps_base_url,
         serve_api,
         system_name,
@@ -343,6 +381,7 @@ struct Member {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(non_snake_case)] // VRChat JSON fields
 struct MemberContent {
     name: String,
     avatarUrl: String,
@@ -360,4 +399,5 @@ struct Config {
     system_name: String,
     vrchat_updater_prefix: String,
     vrchat_updater_no_fronts: String,
+    vrchat_updater_truncate_names_to: usize,
 }

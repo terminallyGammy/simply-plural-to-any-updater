@@ -7,6 +7,6 @@ set -euo pipefail
 # cargo must be installed
 cargo build --release
 
-docker compose build
-docker compose up -d
+docker compose -f server.docker-compose.yml build
+docker compose -f server.docker-compose.yml up -d
 

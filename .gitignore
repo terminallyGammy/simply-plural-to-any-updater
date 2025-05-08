@@ -1,5 +1,6 @@
-dev.server.env
-dev.vrcupdater.env
+# Rust
 target
-example.html
-deploy.env
+
+# Env files
+*.env
+!defaults.env

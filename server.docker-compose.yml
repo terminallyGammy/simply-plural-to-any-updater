@@ -1,7 +1,7 @@
 services:
   sps-status:
     build:
-      dockerfile: Dockerfile
+      dockerfile: server.Dockerfile
       context: "."
     image: "sps-status:latest"
     container_name: sps-status

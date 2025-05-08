@@ -5,6 +5,3 @@ services:
       context: "."
     image: "sps-vrcupdater:latest"
     container_name: sps-vrcupdater
-    # env_file:
-    #   - defaults.env
-    #   - deploy.env

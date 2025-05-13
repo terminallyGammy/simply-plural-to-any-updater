@@ -4,4 +4,4 @@ target
 # Env files
 *.env
 !defaults.env
-!pwsh.vrcupdater.sample.env
+!vrcupdater.sample.env

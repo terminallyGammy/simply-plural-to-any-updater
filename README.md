@@ -1,6 +1,49 @@
 # simply-plural-to-any-updater
 
-Update your Simply Plural system fronting status automatically to
-* your website
-* your VRChat status message
+Update your [Simply Plural](https://apparyllis.com/) system fronting status automatically to
+* your [VRChat](https://hello.vrchat.com/) status message
+* your website as HTML
 
+## SimplyPlural to VRChat Status
+
+When running locally as a VRChat-Updater, it'll check the fronting status
+on SimplyPlural periodically and update the VRChat status to reflect the current fronts
+e.g. `F: Alice, Bob, Claire`.
+
+For this, simply download the executable from `TODO/releases` and run it locally. It'll create an empty file and ask you to put in your SimplyPlural and VRChat credentials.
+These credentials are necessary for it to do it's job. After writing the credentials,
+run the executable again. It will first login into VRChat. You may need to provide
+a 2FA code, if you hav configured one for your account. Then it'll automatically
+update you status in VRChat priodically from SimplyPlural.
+
+## SimplyPlural to Website
+
+When running as a website (`SERVE_API=true`), it serves an endpoint `/fronting`
+and provides a HTML page with the current fronting status (from SimplyPlural)
+as a well-rendered UI.
+
+To run the webserver, simply define a `deploy.env` with the relevant variables and run `restart-services.sh`. It uses a docker compose setup. You can stop services via `stop-services.sh`.
+
+## For Developers
+
+The environment variables are documented in `defaults.env` and `vrcupdater.sample.env`.
+
+All functionality is implemented using Rust and various libraries.
+
+For developers, one can use `dev.*.run.sh` for local quick running.
+
+# Next TODOs
+
+Update the main.rs such that in the VRChat variant it
+
+1. loads the values from defaults.env (downloaded from the online repository)
+   and sets them as environment variables.
+2. Sets SERVE_API=false.
+3. If a local `vrcupdater.env` exists in the same directory, then load the variables.
+    a. Otherwise create it based on the
+        `vrcupdater.sample.env` (downloaded from the online repository),
+        ask the user to edit it
+        and exit.
+4. Continue with the existing execution from `update_vrchat_status_fronts_loop()`.
+
+For this, we need to add some steps before the configuration is loaded `load_config()`.

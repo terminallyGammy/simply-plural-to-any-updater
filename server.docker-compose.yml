@@ -7,7 +7,7 @@ services:
     container_name: sps-status
     env_file:
       - defaults.env
-      - deploy.env
+      - server.env
     restart: always
     networks:
       - sps-status-net

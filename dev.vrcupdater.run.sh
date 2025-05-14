@@ -7,7 +7,7 @@ cargo build --bin sps_status --release
 echo "Done."
 
 echo "Run:"
-set -a; source defaults.env; set +a
-set -a; source dev.vrcupdater.env; set +a
+rm -f vrcupdater.env || true
+cp dev.vrcupdater.env vrcupdater.env # uncomment this line to test absence of env file
 ./target/release/sps_status
 

@@ -32,18 +32,8 @@ All functionality is implemented using Rust and various libraries.
 
 For developers, one can use `dev.*.run.sh` for local quick running.
 
-# Next TODOs
+# Next TODO
 
-Update the main.rs such that in the VRChat variant it
+* Build statically linked binaries for all major platforms and architectures.
+* Automate this into a github action.
 
-1. loads the values from defaults.env (downloaded from the online repository)
-   and sets them as environment variables.
-2. Sets SERVE_API=false.
-3. If a local `vrcupdater.env` exists in the same directory, then load the variables.
-    a. Otherwise create it based on the
-        `vrcupdater.sample.env` (downloaded from the online repository),
-        ask the user to edit it
-        and exit.
-4. Continue with the existing execution from `update_vrchat_status_fronts_loop()`.
-
-For this, we need to add some steps before the configuration is loaded `load_config()`.

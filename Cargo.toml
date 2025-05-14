@@ -14,10 +14,11 @@ name = "download_only"
 path = "src/dummy.rs"
 
 [dependencies]
-chrono = { version = "0.4" }
-rocket = { version = "0.5" }
-anyhow = { version = "1.0" }
-vrchatapi = { version = "1.0" }
+chrono = "0.4"
+rocket = "0.5"
+anyhow = "1.0"
+dotenvy = "0.15"
+vrchatapi = "1.0"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }

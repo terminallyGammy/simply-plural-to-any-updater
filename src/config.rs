@@ -127,8 +127,10 @@ async fn load_vrcupdater_env_or_create_for_user_and_exit(client: &Client) -> Res
         eprintln!(
             "\n\n\n######### IMPORTANT #########\n\
             Configuration file '{}' has been created.\n\
-            Please edit it with your SimplyPlural and VRChat credentials.\n\
-            Then run the application again.",
+            Please edit it with a simple text editor and\n\
+            enter the SimplyPlural and VRChat credentials.\n\
+            The file explains how to get these.\n\
+            Please, run the application again then.",
             vrc_env_path_str
         );
         process::exit(0); // Exit successfully for user to configure

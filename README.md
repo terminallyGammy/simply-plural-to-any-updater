@@ -10,7 +10,7 @@ When running locally as a VRChat-Updater, it'll check the fronting status
 on SimplyPlural periodically and update the VRChat status to reflect the current fronts
 e.g. `F: Alice, Bob, Claire`.
 
-For this, simply download the executable from `TODO/releases` and run it locally. It'll create an empty file and ask you to put in your SimplyPlural and VRChat credentials.
+For this, simply [download the latest executable](https://github.com/GollyTicker/simply-plural-to-any-updater/releases/latest) and run it locally. It'll create an empty file and ask you to put in your SimplyPlural and VRChat credentials.
 These credentials are necessary for it to do it's job. After writing the credentials,
 run the executable again. It will first login into VRChat. You may need to provide
 a 2FA code, if you hav configured one for your account. Then it'll automatically
@@ -32,8 +32,4 @@ All functionality is implemented using Rust and various libraries.
 
 For developers, one can use `dev.*.run.sh` for local quick running.
 
-# Next TODO
-
-* Build statically linked binaries for all major platforms and architectures.
-* Automate this into a github action.
-
+To create a release, simply push a corresponding tag - e.g. `v1.2.3`.

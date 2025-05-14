@@ -56,31 +56,49 @@ async fn update_fronts_in_vrchat_status(
 }
 
 fn format_vrchat_status(config: &Config, fronts: Vec<simply_plural::MemberContent>) -> String {
-    let fronter_strings: Vec<&str> = if fronts.is_empty() {
-        vec![&config.vrchat_updater_no_fronts]
+    let cleaned_fronter_names: Vec<String> = if fronts.is_empty() {
+        vec![config.vrchat_updater_no_fronts.clone()] // Use configured string if no fronters
     } else {
-        fronts.iter().map(|m| m.name.as_str()).collect()
+        fronts.iter().map(|m| clean_name_for_vrchat(&m.name)).collect()
     };
-    eprintln!("Status string elements: {:?}", fronter_strings);
+    eprintln!("Cleaned fronter names for status: {:?}", cleaned_fronter_names);
 
-    let long_string = format!("{} {}", config.vrchat_updater_prefix.as_str(), fronter_strings.join(", "));
-    let short_string = format!("{}{}", config.vrchat_updater_prefix.as_str(), fronter_strings.join(","));
+    // Convert Vec<String> to Vec<&str> for convenient joining and slicing.
+    let fronter_names_as_str: Vec<&str> = cleaned_fronter_names.iter().map(String::as_str).collect();
+
+    let long_string = format!("{} {}", config.vrchat_updater_prefix.as_str(), fronter_names_as_str.join(", "));
+    let short_string = format!("{}{}", config.vrchat_updater_prefix.as_str(), fronter_names_as_str.join(","));
     let truncated_string = {
         let prefix_slice = 0..config.vrchat_updater_truncate_names_to;
-        let truncated_names: Vec<&str> = fronter_strings
+        let truncated_names: Vec<&str> = fronter_names_as_str
             .iter()
-            .map(|name| name.get(prefix_slice.clone()).unwrap_or_default())
+            .map(|&name_slice| name_slice.get(prefix_slice.clone()).unwrap_or_default())
             .collect();
-        format!("{}{}", config.vrchat_updater_prefix.as_str(), truncated_names.join(","))
+        format!("{}{}", config.vrchat_updater_prefix.as_str(), truncated_names.join(",").as_str())
     };
 
     eprintln!("Long      string: '{}' ({})", long_string, long_string.len());
     eprintln!("Short     string: '{}' ({})", short_string, short_string.len());
     eprintln!("Truncated string: '{}' ({})", truncated_string, truncated_string.len());
-
+    
     if long_string.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH { long_string }
     else if short_string.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH { short_string }
     else { truncated_string }
+}
+
+
+// VRChat status messages candoes not display al non-ASCII characters.
+// This function removes all non-ASCII characters from the string.
+// We also trim the name, in case the cleanup made new spaces appear.
+fn clean_name_for_vrchat(dirty_name: &str) -> String {
+    let removed_emjois: String = dirty_name
+        .chars()
+        .filter(|&c| c.is_ascii())
+        .collect();
+
+    let trimmed = removed_emjois.trim().to_string();
+
+    trimmed
 }
 
 async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, String)> {

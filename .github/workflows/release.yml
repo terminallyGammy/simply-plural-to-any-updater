@@ -16,8 +16,7 @@ jobs:
     - name: Install Rust, Cargo and rustup
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Install MinGW toolchains
-      # These are needed by the build script for the Windows targets
+    - name: Install MinGW toolchains for Windows targets
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
@@ -26,7 +25,6 @@ jobs:
       run: "./build-binaries.sh"
 
     - name: Create Release and Upload Assets
-      # Creates a GitHub Release and uploads the built executables
       uses: softprops/action-gh-release@v1
       with:
         token: ${{ secrets.DEPLOY_TOKEN }}

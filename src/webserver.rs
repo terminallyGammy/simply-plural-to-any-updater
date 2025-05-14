@@ -1,4 +1,4 @@
-use crate::base::Config;
+use crate::config::Config;
 use crate::simply_plural::{self};
 use anyhow::Result;
 use rocket::{response::{self, content::RawHtml}, State};

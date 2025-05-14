@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use anyhow::Result;
 
-use crate::base::Config;
+use crate::config::Config;
 
 
 pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {

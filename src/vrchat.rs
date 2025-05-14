@@ -1,4 +1,4 @@
-use crate::{base::Config, simply_plural};
+use crate::{config::Config, simply_plural};
 use anyhow::{anyhow, Result};
 use std::{
     io::{self, Write},

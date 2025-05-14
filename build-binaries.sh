@@ -9,7 +9,7 @@ set -euo pipefail
 
 TARGETS=(
     "x86_64-pc-windows-gnu"  # 64-bit Windows
-    "i686-pc-windows-gnu"    # 32-bit Windows
+    # "i686-pc-windows-gnu"    # 32-bit Windows # todo. add back later
 )
 
 # extract project name from Cargo.toml

@@ -30,4 +30,4 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         token: ${{ secrets.DEPLOY_TOKEN }}
-        files: "target/release_builds/*.exe"
+        files: "target/release_builds/*"

@@ -1,4 +1,5 @@
-use crate::{base::Config, simply_plural::{fetch_fronts, MemberContent}};
+use crate::base::Config;
+use crate::simply_plural::{self};
 use anyhow::Result;
 use rocket::{response::{self, content::RawHtml}, State};
 
@@ -14,20 +15,19 @@ pub async fn run_server(config: &Config) -> Result<()> {
 
 #[get("/fronting")]
 async fn rest_get_fronting(config: &State<Config>) -> Result<RawHtml<String>, response::Debug<anyhow::Error>> {
-    // Assuming fetch_fronts is now in simply_plural module and public
-    let fronts = fetch_fronts(config.inner()).await
+    let fronts = simply_plural::fetch_fronts(config.inner()).await
         .map_err(|e| response::Debug(e))?; // Convert anyhow::Error to response::Debug
     let html = generate_html(config.inner(), fronts);
     Ok(RawHtml(html))
 }
 
-fn generate_html(config: &Config, fronts: Vec<MemberContent>) -> String {
+fn generate_html(config: &Config, fronts: Vec<simply_plural::MemberContent>) -> String {
     let fronts_formatted = fronts
         .into_iter()
         .map(|m| -> String {
             format!(
                 "<div><img src=\"{}\" /><p>{}</p></div>",
-                m.avatarUrl, // Assuming MemberContent has avatarUrl
+                m.avatarUrl, // if URL is empty, then simply no image is rendered.
                 html_escape::encode_text(&m.name)
             )
         })

@@ -1,4 +1,4 @@
-use crate::{base::Config, simply_plural::MemberContent};
+use crate::{base::Config, simply_plural};
 use anyhow::{anyhow, Result};
 use std::{
     io::{self, Write},
@@ -18,22 +18,15 @@ const VRCHAT_UPDATER_USER_AGENT: &str = concat!(
     "@",
     "gmail.com"
 );
+
 const VRCHAT_MAX_ALLOWED_STATUS_LENGTH: usize = 23;
 
-pub async fn run_updater_loop(config: &Config, initial_fronts: Vec<MemberContent>) -> Result<()> {
+pub async fn run_updater_loop(config: &Config) -> Result<()> {
     let (vrchat_config, user_id) = authenticate_vrchat(config).await?;
-
-    // Initial update with already fetched fronts
-    eprintln!("\n\n======================= UTC {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
-    update_fronts_in_vrchat_status(&config, &vrchat_config, &user_id, initial_fronts).await?;
-    eprintln!("Waiting {}s for next update trigger...", config.wait_seconds);
-    thread::sleep(Duration::from_secs(config.wait_seconds));
 
     loop {
         eprintln!("\n\n======================= UTC {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
 
-        // Fetch new fronts for subsequent updates
-        // Assuming fetch_fronts is now in simply_plural module and public
         let fronts = crate::simply_plural::fetch_fronts(&config).await?;
         
         update_fronts_in_vrchat_status(&config, &vrchat_config, &user_id, fronts).await?;
@@ -47,7 +40,7 @@ async fn update_fronts_in_vrchat_status(
     config: &Config,
     vrchat_config: &Configuration,
     user_id: &String,
-    fronts: Vec<MemberContent>,
+    fronts: Vec<simply_plural::MemberContent>,
 ) -> Result<()> {
     let status_string = format_vrchat_status(config, fronts);
 
@@ -62,7 +55,7 @@ async fn update_fronts_in_vrchat_status(
     Ok(())
 }
 
-fn format_vrchat_status(config: &Config, fronts: Vec<MemberContent>) -> String {
+fn format_vrchat_status(config: &Config, fronts: Vec<simply_plural::MemberContent>) -> String {
     let fronter_strings: Vec<&str> = if fronts.is_empty() {
         vec![&config.vrchat_updater_no_fronts]
     } else {

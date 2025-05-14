@@ -8,6 +8,11 @@ edition = "2021"
 name = "sps_status"
 path = "src/main.rs"
 
+# binary target for docker build caching
+[[bin]]
+name = "download_only"
+path = "src/dummy.rs"
+
 [dependencies]
 chrono = { version = "0.4" }
 rocket = { version = "0.5" }

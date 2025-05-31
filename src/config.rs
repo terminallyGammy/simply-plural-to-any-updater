@@ -21,10 +21,12 @@ pub struct Config {
     pub vrchat_updater_prefix: String,
     pub vrchat_updater_no_fronts: String,
     pub vrchat_updater_truncate_names_to: usize,
+    pub vrchat_cookie: String,
 }
 
 const DEFAULTS_ENV_URL: &str = "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/defaults.env";
 const VRCUPDATER_SAMPLE_ENV_URL: &str = "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/vrcupdater.sample.env";
+const VRC_ENV_PATH_STR: &str = "vrcupdater.env";
 
 
 pub(crate) async fn setup_and_load_config() -> Result<Config> {
@@ -50,6 +52,9 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
     let vrchat_password = optional_vrchat_config.clone().or(var("VRCHAT_PASSWORD")).expect("VRCHAT_PASSWORD not set");
     eprintln!("Credentials loaded. VRCHAT_USERNAME is {}", vrchat_username);
 
+    let vrchat_cookie = var("VRCHAT_COOKIE").unwrap_or("".to_string());
+    eprintln!("A VRChat cookie was {}", if vrchat_cookie.is_empty() { "not found." } else { "found and will be used." });
+
     let system_name = if serve_api { var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.") } else { "".to_string() }; 
 
     let vrchat_updater_prefix = var("VRCHAT_UPDATER_PREFIX").expect("VRCHAT_UPDATER_PREFIX not set.");
@@ -71,6 +76,7 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
         sps_token,
         vrchat_username,
         vrchat_password,
+        vrchat_cookie,
         vrchat_updater_prefix,
         vrchat_updater_no_fronts,
         vrchat_updater_truncate_names_to,
@@ -113,15 +119,14 @@ async fn load_remote_defaults_env(client: &Client) -> Result<()> {
 /// If it exists, it's loaded. If not, it's created from a remote sample,
 /// and the program exits, prompting the user to configure it.
 async fn load_vrcupdater_env_or_create_for_user_and_exit(client: &Client) -> Result<()> {
-    let vrc_env_path_str = "vrcupdater.env";
-    let vrc_env_path = Path::new(vrc_env_path_str);
+    let vrc_env_path = Path::new(VRC_ENV_PATH_STR);
 
     if vrc_env_path.exists() {
         let content = fs::read_to_string(vrc_env_path)?;
-        load_env_vars_from_string(&content, vrc_env_path_str);
-        eprintln!("Using local {}...", vrc_env_path_str);
+        load_env_vars_from_string(&content, VRC_ENV_PATH_STR);
+        eprintln!("Using local {}...", VRC_ENV_PATH_STR);
     } else {
-        eprintln!("{} not found. Creating sample environment file...", vrc_env_path_str);
+        eprintln!("{} not found. Creating sample environment file...", VRC_ENV_PATH_STR);
         let sample_content = download_file_content_for_setup(VRCUPDATER_SAMPLE_ENV_URL, client).await?;
         fs::write(vrc_env_path, sample_content)?;
         eprintln!(
@@ -131,7 +136,7 @@ async fn load_vrcupdater_env_or_create_for_user_and_exit(client: &Client) -> Res
             enter the SimplyPlural and VRChat credentials.\n\
             The file explains how to get these.\n\
             Please, run the application again then.",
-            vrc_env_path_str
+            VRC_ENV_PATH_STR
         );
         process::exit(0); // Exit successfully for user to configure
     }
@@ -147,6 +152,35 @@ fn load_env_vars_from_string(content: &str, source_name: &str) {
     }
 }
 
+// Function to store the VRChat Cookie into the .env file of configs.
+// If a line starting with VRC_COOKIE is defined in the file,
+// then we replace it with VRC_COOKIE="cookie_str".
+// Otherwise, we add such a line to the very end and save the file.
+pub(crate) async fn store_vrchat_cookie(cookie_str: &str) -> Result<()>{
+    let vrc_env_path = Path::new(VRC_ENV_PATH_STR);
+    let content = fs::read_to_string(vrc_env_path)?;
+    let new_cookie_line = format!("VRCHAT_COOKIE=\"{}\"", cookie_str);
+    let cookie_key_prefix = "VRCHAT_COOKIE=";
+
+    let mut lines: Vec<String> = content.lines().map(String::from).collect();
+    
+    if let Some(existing_line_idx) =
+        lines.iter().position(|line| line.trim_start().starts_with(cookie_key_prefix))
+    {
+        lines[existing_line_idx] = new_cookie_line;
+    } else {
+        lines.push("".to_string());
+        lines.push("# DO NOT EDIT THE COOKIE BELOW!".to_string());
+        lines.push(new_cookie_line);
+        lines.push("".to_string());
+    }
+
+    let new_content = lines.join("\n");
+    fs::write(vrc_env_path, new_content)?;
+
+    eprintln!("VRChat cookie stored in {}.", VRC_ENV_PATH_STR);
+    Ok(())
+}
 
 // Helper function to download file content specifically for setup
 async fn download_file_content_for_setup(url: &str, client: &reqwest::Client) -> Result<String> {

@@ -1,8 +1,8 @@
-use crate::{config::Config, simply_plural};
+use crate::{config::{self, Config}, simply_plural};
 use anyhow::{anyhow, Result};
+use reqwest::{cookie::{self, CookieStore}, Url};
 use std::{
-    io::{self, Write},
-    thread, time,
+    io::{self, Write}, str::FromStr, sync::{self}, thread, time
 };
 use time::Duration;
 use vrchatapi::{
@@ -19,6 +19,7 @@ const VRCHAT_UPDATER_USER_AGENT: &str = concat!(
     "gmail.com"
 );
 
+const VRCHAT_COOKIE_URL: &str = "https://api.vrchat.cloud";
 const VRCHAT_MAX_ALLOWED_STATUS_LENGTH: usize = 23;
 
 pub async fn run_updater_loop(config: &Config) -> Result<()> {
@@ -106,6 +107,19 @@ async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, String)>
     vrchat_config.user_agent = Some(VRCHAT_UPDATER_USER_AGENT.to_string());
     vrchat_config.basic_auth = Some((config.vrchat_username.clone(), Some(config.vrchat_password.clone())));
 
+    let cookie_store = sync::Arc::new(cookie::Jar::default());
+    let cookie_url = &Url::from_str(VRCHAT_COOKIE_URL).unwrap();
+
+    // if we have a cookie, use it.
+    if !config.vrchat_cookie.is_empty() {
+        cookie_store.add_cookie_str(&config.vrchat_cookie, cookie_url);
+    };
+
+    vrchat_config.client = reqwest::Client::builder()
+        .cookie_provider(cookie_store.clone())
+        .build()
+        .unwrap();
+        
     match authentication_api::get_current_user(&vrchat_config).await.unwrap() {
         EitherUserOrTwoFactor::CurrentUser(_me) => true,
         EitherUserOrTwoFactor::RequiresTwoFactorAuth(requires_auth) => {
@@ -118,6 +132,12 @@ async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, String)>
             }
         }
     };
+
+    // if we don't have a cookie already saved, store it.
+    if config.vrchat_cookie.is_empty() {
+        let cookie_value = cookie_store.cookies(cookie_url).unwrap();
+        config::store_vrchat_cookie(cookie_value.to_str().unwrap()).await?;
+    }
 
     match authentication_api::get_current_user(&vrchat_config).await.unwrap() {
         EitherUserOrTwoFactor::CurrentUser(user) => Ok((vrchat_config, user.id)),

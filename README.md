@@ -37,3 +37,4 @@ To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
 
 ### Next Steps
 * support accents such as š in member names in the VRChat status
+* check the "VRChat Status Name" field for members and use that instead, if provided. That one will be VRChat Status compatible

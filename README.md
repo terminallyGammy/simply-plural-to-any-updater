@@ -34,3 +34,6 @@ All functionality is implemented using Rust and various libraries.
 For developers, one can use `dev.*.run.sh` for local quick running.
 
 To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
+
+### Next Steps
+* support accents such as š in member names in the VRChat status

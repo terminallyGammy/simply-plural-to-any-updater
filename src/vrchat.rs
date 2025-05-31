@@ -110,8 +110,9 @@ async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, String)>
     let cookie_store = sync::Arc::new(cookie::Jar::default());
     let cookie_url = &Url::from_str(VRCHAT_COOKIE_URL).unwrap();
 
-    // if we have a cookie, use it.
-    if !config.vrchat_cookie.is_empty() {
+    let mut cookie_exists = !config.vrchat_cookie.is_empty();
+
+    if cookie_exists {
         cookie_store.add_cookie_str(&config.vrchat_cookie, cookie_url);
     };
 
@@ -119,10 +120,12 @@ async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, String)>
         .cookie_provider(cookie_store.clone())
         .build()
         .unwrap();
-        
+    
     match authentication_api::get_current_user(&vrchat_config).await.unwrap() {
         EitherUserOrTwoFactor::CurrentUser(_me) => true,
         EitherUserOrTwoFactor::RequiresTwoFactorAuth(requires_auth) => {
+            // either cookie was empty or invalid. we mark the cookie as such then
+            cookie_exists = false;
             if requires_auth.requires_two_factor_auth.contains(&String::from("emailOtp")) {
                 let code = read_user_input(&format!("Your account {} has received an Email with a 2FA code. Please enter it: ", config.vrchat_username));
                 authentication_api::verify2_fa_email_code(&vrchat_config, TwoFactorEmailCode::new(code)).await?.verified
@@ -133,8 +136,7 @@ async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, String)>
         }
     };
 
-    // if we don't have a cookie already saved, store it.
-    if config.vrchat_cookie.is_empty() {
+    if !cookie_exists {
         let cookie_value = cookie_store.cookies(cookie_url).unwrap();
         config::store_vrchat_cookie(cookie_value.to_str().unwrap()).await?;
     }

@@ -14,7 +14,8 @@ For this, simply [download the latest executable](https://github.com/GollyTicker
 These credentials are necessary for it to do it's job. After writing the credentials,
 run the executable again. It will first login into VRChat. You may need to provide
 a 2FA code, if you hav configured one for your account. Then it'll automatically
-update you status in VRChat priodically from SimplyPlural.
+update your status in VRChat priodically from SimplyPlural. The login is saved in a cookie,
+so you won't need to input your 2FA code that often.
 
 ## SimplyPlural to Website
 
@@ -33,6 +34,3 @@ All functionality is implemented using Rust and various libraries.
 For developers, one can use `dev.*.run.sh` for local quick running.
 
 To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
-
-### Next task
-* make vrcupdater remember the cookie such that the 2FA doesn't need to be put in on every start-up.

@@ -33,3 +33,6 @@ All functionality is implemented using Rust and various libraries.
 For developers, one can use `dev.*.run.sh` for local quick running.
 
 To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
+
+### Next task
+* make vrcupdater remember the cookie such that the 2FA doesn't need to be put in on every start-up.

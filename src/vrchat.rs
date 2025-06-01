@@ -176,3 +176,62 @@ fn read_user_input(prompt: &str) -> String {
     io::stdin().read_line(&mut input).expect("Failed to read line");
     input.trim().to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clean_name_for_vrchat_encoding_and_whitespace() {
+        assert_eq!(
+            clean_name_for_vrchat("ValidName123!€ Špecial Chars Ž"),
+            "ValidName123!€ Špecial Chars Ž",
+            "Should keep all valid ISO_8859_15 characters"
+        );
+
+        assert_eq!(
+            clean_name_for_vrchat("Name😊With🚀Emojis❤️Symbols✅"),
+            "NameWithEmojisSymbols",
+            "Should remove emojis"
+        );
+
+        assert_eq!(
+            clean_name_for_vrchat("Héllo Wörld🎉"),
+            "Héllo Wörld",
+            "Should handle mixed valid and invalid characters"
+        );
+
+        assert_eq!(
+            clean_name_for_vrchat("  Trimmed  From  Name  "),
+            "Trimmed From Name",
+            "Should collapse consecutive spaces and trim"
+        );
+
+        assert_eq!(
+            clean_name_for_vrchat(""),
+            ""
+        );
+
+        assert_eq!(
+            clean_name_for_vrchat("😊🚀🎉"),
+            ""
+        );
+
+        assert_eq!(
+            clean_name_for_vrchat("   \t\n   "),
+            ""
+        );
+
+        assert_eq!(
+            clean_name_for_vrchat("你好WorldПриветUser1"),
+            "WorldUser1",
+            "Should remove characters from other scripts like Hanzi or Cyrillic"
+        );
+
+        assert_eq!(
+            clean_name_for_vrchat("A 😊B C🚀D"),
+            "A B CD",
+            "Should collapse spaces created by invalid characters"
+        );
+    }
+}

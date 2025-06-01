@@ -8,7 +8,7 @@ use std::process;         // Added for `exit`
 use reqwest::Client;
 use anyhow::Result;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Config {
     pub sps_token: String,
     pub vrchat_username: String,

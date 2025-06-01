@@ -183,6 +183,108 @@ fn read_user_input(prompt: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Config;
+    use crate::simply_plural::{MemberContent, MemberContentInfo};
+
+    fn mock_config_for_format_tests(prefix: &str, no_fronts: &str, name_truncate_to: usize) -> Config {
+        let mut config = Config::default();
+        config.vrchat_updater_prefix = prefix.to_string();
+        config.vrchat_updater_no_fronts = no_fronts.to_string();
+        config.vrchat_updater_truncate_names_to = name_truncate_to;
+        config
+    }
+
+    // Helper function to create mock MemberContent
+    fn mock_member_content(name: &str, vrchat_status_name: &str) -> MemberContent {
+        MemberContent {
+            name: name.to_string(),
+            avatar_url: String::new(),
+            info: MemberContentInfo {
+                vrchat_status_name: vrchat_status_name.to_string(),
+            },
+        }
+    }
+
+    #[test]
+    fn test_format_vrchat_status_empty_fronts() {
+        let config = mock_config_for_format_tests("F:", "nobody?", 3);
+        let fronts = vec![];
+        assert_eq!(format_vrchat_status(&config, fronts), "F: nobody?");
+    }
+
+    #[test]
+    fn test_format_vrchat_status_single_member_fits_long_string() {
+        let config = mock_config_for_format_tests("F:", "N/A", 3);
+        let fronts = vec![mock_member_content("Alice", "")]; // "P: Alice" (8 chars)
+        assert_eq!(format_vrchat_status(&config, fronts), "F: Alice");
+    }
+
+    #[test]
+    fn test_format_vrchat_status_multiple_members_fit_long_string() {
+        let config = mock_config_for_format_tests("F:", "N/A", 3);
+        let fronts = vec![
+            mock_member_content("Alice", ""),
+            mock_member_content("Bob", ""),
+        ]; // "P: Alice, Bob" (13 chars)
+        assert_eq!(format_vrchat_status(&config, fronts), "F: Alice, Bob");
+    }
+
+    #[test]
+    fn test_format_vrchat_status_fits_short_string_not_long() {
+        // VRCHAT_MAX_ALLOWED_STATUS_LENGTH is 23
+        let config = mock_config_for_format_tests("Status:", "N/A", 3);
+        let fronts = vec![
+            mock_member_content("UserOne", ""),
+            mock_member_content("UserTwo", ""),
+        ];
+        // Long: "Status: UserOne, UserTwo" (24 chars) > 23
+        // Short: "Status:UserOne,UserTwo" (23 chars) <= 23
+        assert_eq!(format_vrchat_status(&config, fronts), "Status:UserOne,UserTwo");
+    }
+
+    #[test]
+    fn test_format_vrchat_status_fits_truncated_string_not_short() {
+        let config = mock_config_for_format_tests("F:", "N/A", 3);
+        let fronts = vec![
+            mock_member_content("Alexander", ""),
+            mock_member_content("Benjamin", ""),
+            mock_member_content("Charlotte", ""),
+        ];
+        // Long: "P: Alexander, Benjamin, Charlotte" 33 > 23
+        // Short: "P:Alexander,Benjamin,Charlotte" 31 > 23
+        // Truncated: "P:Ale,Ben,Cha" 14 <= 23
+        assert_eq!(format_vrchat_status(&config, fronts), "F:Ale,Ben,Cha");
+    }
+
+    #[test]
+    fn test_format_vrchat_status_uses_vrchat_status_name() {
+        let config = mock_config_for_format_tests("F:", "N/A", 3);
+        let fronts = vec![mock_member_content("OriginalName", "VRChatSpecific")];
+        assert_eq!(format_vrchat_status(&config, fronts), "F: VRChatSpecific");
+    }
+
+    #[test]
+    fn test_format_vrchat_status_cleans_names() {
+        let config = mock_config_for_format_tests("F:", "N/A", 3);
+        let fronts = vec![mock_member_content("User😊Name", "")];
+        assert_eq!(format_vrchat_status(&config, fronts), "F: UserName");
+    }
+
+    #[test]
+    fn test_format_vrchat_status_complex_truncation_and_vrc_name() {
+        let config = mock_config_for_format_tests("F:", "N/A", 4);
+        let fronts = vec![
+            mock_member_content("LongNameOne😊", ""),
+            mock_member_content("Shorty", "VRC11"),
+            mock_member_content("AnotherVeryLong", "")
+        ];
+        // Cleaned names for status: LongNameOne, VRC11, AnotherVeryLong
+        // Long: "F: LongNameOne, VRC11, AnotherVeryLong" 38 > 23
+        // Short: "F:LongNameOne,VRC11,AnotherVeryLong" 36 > 23
+        // Truncated names: Long, VRC1, Anot
+        // Truncated string: "F:Long,VRC1,Anot" 17 <= 23
+        assert_eq!(format_vrchat_status(&config, fronts), "F:Long,VRC1,Anot");
+    }
 
     #[test]
     fn test_clean_name_for_vrchat_encoding_and_whitespace() {

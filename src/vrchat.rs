@@ -1,4 +1,5 @@
 use crate::{config::{self, Config}, simply_plural};
+use encoding_rs::{self, ISO_8859_15};
 use anyhow::{anyhow, Result};
 use reqwest::{cookie::{self, CookieStore}, Url};
 use std::{
@@ -70,10 +71,17 @@ fn format_vrchat_status(config: &Config, fronts: Vec<simply_plural::MemberConten
     let long_string = format!("{} {}", config.vrchat_updater_prefix.as_str(), fronter_names_as_str.join(", "));
     let short_string = format!("{}{}", config.vrchat_updater_prefix.as_str(), fronter_names_as_str.join(","));
     let truncated_string = {
-        let prefix_slice = 0..config.vrchat_updater_truncate_names_to;
-        let truncated_names: Vec<&str> = fronter_names_as_str
+        let truncated_names: Vec<String> = fronter_names_as_str
             .iter()
-            .map(|&name_slice| name_slice.get(prefix_slice.clone()).unwrap_or_default())
+            .map(|&name| {
+                let mut truncated_name = String::new();
+                
+                let _ = &name.chars()
+                    .take(config.vrchat_updater_truncate_names_to)
+                    .for_each(|c| truncated_name.push(c));
+                
+                truncated_name
+            })
             .collect();
         format!("{}{}", config.vrchat_updater_prefix.as_str(), truncated_names.join(",").as_str())
     };
@@ -88,18 +96,32 @@ fn format_vrchat_status(config: &Config, fronts: Vec<simply_plural::MemberConten
 }
 
 
-// VRChat status messages candoes not display al non-ASCII characters.
-// This function removes all non-ASCII characters from the string.
+// VRChat status messages does not display all UTF-8 characters.
+// This function removes all characters which are not of a specific encoding from the string.
 // We also trim the name, in case the cleanup made new spaces appear.
 fn clean_name_for_vrchat(dirty_name: &str) -> String {
-    let removed_emjois: String = dirty_name
-        .chars()
-        .filter(|&c| c.is_ascii())
-        .collect();
+    let mut iso_filtered_name = String::new();
+    
+    for ch in dirty_name.chars() {
+        // Convert char utf-8 str
+        let ch_string = ch.to_string();
 
-    let trimmed = removed_emjois.trim().to_string();
+        // convert utf-8 str to the limited encoding and check if the character is supported.
+        let mut char_cleaned_buffer = [0u8; 20];
+        let (_, _, _, is_unsupported_character) = ISO_8859_15
+            .new_encoder()
+            .encode_from_utf8(&ch_string.as_str(), &mut char_cleaned_buffer, true);
 
-    trimmed
+        if !is_unsupported_character {
+            iso_filtered_name.push(ch);
+        }
+    }
+
+    // remove consecutive whitespace resulting from cleanup. also trims string.
+    iso_filtered_name
+        .split_whitespace()
+        .collect::<Vec<&str>>()
+        .join(" ")
 }
 
 async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, String)> {

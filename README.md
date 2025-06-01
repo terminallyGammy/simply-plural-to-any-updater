@@ -25,6 +25,15 @@ as a well-rendered UI.
 
 To run the webserver, simply define a `deploy.env` with the relevant variables and run `restart-services.sh`. It uses a docker compose setup. You can stop services via `stop-services.sh`.
 
+## FAQ
+
+**Why is my member name not shown correctly?**
+
+VRChat has limitations on what it allows one to show in the VRChat Status message.
+While most european letters and accents are supported, special things such as emojis are not.
+Hence this tool removes them before forwarding them to VRChat. If you think something is being removed,
+while it's actually possible in the VRChat status, then shortly contact me and let me know (or write an issue).
+
 ## For Developers
 
 The environment variables are documented in `defaults.env` and `vrcupdater.sample.env`.
@@ -36,5 +45,4 @@ For developers, one can use `dev.*.run.sh` for local quick running.
 To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
 
 ### Next Steps
-* support accents such as š in member names in the VRChat status
 * check the "VRChat Status Name" field for members and use that instead, if provided. That one will be VRChat Status compatible

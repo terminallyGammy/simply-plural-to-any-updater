@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*' # Trigger on tags starting with v (e.g. v1.0.0)
+      - 'v*' # Trigger on tags starting with v (e.g. v1.0)
 
 jobs:
   release:
@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Required to fetch all history for all tags and branches
+        fetch-depth: 0
 
     - name: Install Rust, Cargo and rustup
       uses: dtolnay/rust-toolchain@stable

@@ -5,7 +5,6 @@ use crate::config::Config;
 
 
 pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
-    // 1. Fetch current fronts from Simply Plural
     let fronts_url = format!("{}/fronters", &config.sps_base_url);
     eprintln!("Fetching fronts from SPS: {}", fronts_url);
     let fronts_response = config
@@ -14,7 +13,6 @@ pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> 
         .header("Authorization", &config.sps_token)
         .send()
         .await?;
-    eprintln!("Status: {}", fronts_response.status());
     
     let front_entries: Vec<FrontEntry> = fronts_response
         .error_for_status()?
@@ -42,7 +40,6 @@ async fn enrich_fronter_ids_with_member_info(front_entries: Vec<FrontEntry>, con
         .header("Authorization", &config.sps_token)
         .send()
         .await?;
-    eprintln!("Status: {}", members_response.status());
 
     let members: Vec<Member> = members_response.error_for_status()?.json().await?;
 
@@ -78,8 +75,20 @@ pub struct Member {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-#[allow(non_snake_case)] // To match Simply Plural API fields like avatarUrl
 pub struct MemberContent {
     pub name: String,
-    pub avatarUrl: String,
+    
+    #[serde(rename = "avatarUrl")]
+    #[serde(default)]
+    pub avatar_url: String,
+    
+    #[serde(default)]
+    pub info: MemberContentInfo,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct MemberContentInfo {
+    // this is the id of the custom field "VRChat Status Name"
+    #[serde(rename = "683b8c2b7a5026a429000000")]
+    pub vrchat_status_name: String,
 }

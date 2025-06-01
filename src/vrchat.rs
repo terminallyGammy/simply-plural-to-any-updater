@@ -50,7 +50,7 @@ async fn update_fronts_in_vrchat_status(
     update_request.status_description = Some(status_string.clone());
 
     match users_api::update_user(vrchat_config, &user_id, Some(update_request)).await {
-        Ok(_) => eprintln!("VRChat status updated successfully to: {}", status_string),
+        Ok(_) => eprintln!("VRChat status updated successfully to: '{}'", status_string),
         Err(err) => eprintln!("VRChat status failed to be updated. Error: {}", err),
     }
 
@@ -61,7 +61,10 @@ fn format_vrchat_status(config: &Config, fronts: Vec<simply_plural::MemberConten
     let cleaned_fronter_names: Vec<String> = if fronts.is_empty() {
         vec![config.vrchat_updater_no_fronts.clone()] // Use configured string if no fronters
     } else {
-        fronts.iter().map(|m| clean_name_for_vrchat(&m.name)).collect()
+        fronts.iter().map(|m| {
+            let name = if m.info.vrchat_status_name.is_empty() { &m.name } else { &m.info.vrchat_status_name };
+            clean_name_for_vrchat(name)
+        }).collect()
     };
     eprintln!("Cleaned fronter names for status: {:?}", cleaned_fronter_names);
 

@@ -27,7 +27,7 @@ fn generate_html(config: &Config, fronts: Vec<simply_plural::MemberContent>) -> 
         .map(|m| -> String {
             format!(
                 "<div><img src=\"{}\" /><p>{}</p></div>",
-                m.avatarUrl, // if URL is empty, then simply no image is rendered.
+                m.avatar_url, // if URL is empty, then simply no image is rendered.
                 html_escape::encode_text(&m.name)
             )
         })

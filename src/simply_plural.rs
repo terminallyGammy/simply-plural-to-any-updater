@@ -4,57 +4,67 @@ use anyhow::Result;
 use crate::config::Config;
 
 
-pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
-    let fronts_url = format!("{}/fronters", &config.sps_base_url);
-    eprintln!("Fetching fronts from SPS: {}", fronts_url);
-    let fronts_response = config
-        .client
-        .get(&fronts_url)
-        .header("Authorization", &config.sps_token)
-        .send()
-        .await?;
-    
-    let front_entries: Vec<FrontEntry> = fronts_response
-        .error_for_status()?
-        .json()
-        .await?;
+pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {    
+    let front_entries =simply_plural_http_request_get_fronters(config).await?;
 
-    let fronter_ids: Vec<&String> = front_entries.iter().map(|e| &e.content.member).collect();
-    eprintln!("Fronter IDs: {:?}", fronter_ids);
-
-    let fronts: Vec<MemberContent> = if fronter_ids.is_empty() { vec![] } else { enrich_fronter_ids_with_member_info(front_entries, config).await? };
+    let fronts = enrich_fronter_ids_with_member_info(front_entries, config).await?;
 
     Ok(fronts)
 }
 
 
 async fn enrich_fronter_ids_with_member_info(front_entries: Vec<FrontEntry>, config: &Config) -> Result<Vec<MemberContent>> {
+    if front_entries.is_empty() {
+        return Ok(vec![])
+    }
+
     let system_id = &front_entries[0].content.uid;
-    let front_uids: Vec<String>  = front_entries.iter().map(|e| e.content.member.clone()).collect();
-
-    let fronts_url = format!("{}/members/{}", &config.sps_base_url, system_id);
-    eprintln!("Fetching all members from SPS: {}", fronts_url);
-    let members_response = config
-        .client
-        .get(&fronts_url)
-        .header("Authorization", &config.sps_token)
-        .send()
-        .await?;
-
-    let members: Vec<Member> = members_response.error_for_status()?.json().await?;
-
-    let fronting_members: Vec<MemberContent> = members
+    let all_members = simply_plural_http_get_members(config, system_id).await?;
+    
+    let fronters: Vec<String>  = front_entries.iter().map(|e| e.content.member.clone()).collect();
+    let enriched_fronting_members: Vec<MemberContent> = all_members
         .into_iter()
-        .filter(|m| front_uids.contains(&m.id))
+        .filter(|m| fronters.contains(&m.id))
         .map(|m| {
             eprintln!("Fronting member: {:?}",m.content);
             m.content
         })
         .collect();
 
-    return Ok(fronting_members);
-}   
+    return Ok(enriched_fronting_members);
+}
 
+async fn simply_plural_http_request_get_fronters(config: &Config) -> Result<Vec<FrontEntry>> {
+    eprintln!("Fetching fronts from SimplyPlural...");
+    let fronts_url = format!("{}/fronters", &config.sps_base_url);
+    let result = config
+        .client
+        .get(&fronts_url)
+        .header("Authorization", &config.sps_token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    
+    Ok(result)
+}
+
+async fn simply_plural_http_get_members(config: &Config, system_id: &String) -> Result<Vec<Member>> {
+    eprintln!("Fetching all members from SimplyPlural..");
+    let fronts_url = format!("{}/members/{}", &config.sps_base_url, system_id);
+    let result = config
+        .client
+        .get(&fronts_url)
+        .header("Authorization", &config.sps_token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+
+    Ok(result)
+}
 
 
 #[derive(Deserialize, Debug, Clone)]

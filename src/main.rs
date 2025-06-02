@@ -3,6 +3,8 @@
 mod config;
 mod simply_plural;
 mod vrchat;
+mod vrchat_auth;
+mod vrchat_status;
 mod webserver;
 
 use anyhow::Result;

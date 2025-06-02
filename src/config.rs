@@ -1,8 +1,8 @@
 
-use std::env::{self, var}; // Added `env` for `set_var`
-use std::fs;               // Added for file operations
-use std::path::Path;        // Added for path manipulation
-use std::process;         // Added for `exit`
+use std::env::{self, var};
+use std::fs;
+use std::path::Path;
+use std::process;
 
 
 use reqwest::Client;
@@ -28,7 +28,6 @@ const DEFAULTS_ENV_URL: &str = "https://raw.githubusercontent.com/GollyTicker/si
 const VRCUPDATER_SAMPLE_ENV_URL: &str = "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/vrcupdater.sample.env";
 const VRC_ENV_PATH_STR: &str = "vrcupdater.env";
 
-
 pub(crate) async fn setup_and_load_config() -> Result<Config> {
 
     let client = Client::builder()
@@ -53,7 +52,9 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
     eprintln!("Credentials loaded. VRCHAT_USERNAME is {}", vrchat_username);
 
     let vrchat_cookie = var("VRCHAT_COOKIE").unwrap_or("".to_string());
-    eprintln!("A VRChat cookie was {}", if vrchat_cookie.is_empty() { "not found." } else { "found and will be used." });
+    if !vrchat_cookie.is_empty() {
+        eprintln!("A VRChat cookie was found and will be used.");
+    };
 
     let system_name = if serve_api { var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.") } else { "".to_string() }; 
 

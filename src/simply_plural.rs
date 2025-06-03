@@ -1,32 +1,36 @@
-use serde::Deserialize;
 use anyhow::Result;
+use serde::Deserialize;
 
 use crate::config::Config;
 
-
-pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {    
-    let front_entries =simply_plural_http_request_get_fronters(config).await?;
+pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
+    let front_entries = simply_plural_http_request_get_fronters(config).await?;
 
     let fronts = enrich_fronter_ids_with_member_info(front_entries, config).await?;
 
     Ok(fronts)
 }
 
-
-async fn enrich_fronter_ids_with_member_info(front_entries: Vec<FrontEntry>, config: &Config) -> Result<Vec<MemberContent>> {
+async fn enrich_fronter_ids_with_member_info(
+    front_entries: Vec<FrontEntry>,
+    config: &Config,
+) -> Result<Vec<MemberContent>> {
     if front_entries.is_empty() {
-        return Ok(vec![])
+        return Ok(vec![]);
     }
 
     let system_id = &front_entries[0].content.uid;
     let all_members = simply_plural_http_get_members(config, system_id).await?;
-    
-    let fronters: Vec<String>  = front_entries.iter().map(|e| e.content.member.clone()).collect();
+
+    let fronters: Vec<String> = front_entries
+        .iter()
+        .map(|e| e.content.member.clone())
+        .collect();
     let enriched_fronting_members: Vec<MemberContent> = all_members
         .into_iter()
         .filter(|m| fronters.contains(&m.id))
         .map(|m| {
-            eprintln!("Fronting member: {:?}",m.content);
+            eprintln!("Fronting member: {:?}", m.content);
             m.content
         })
         .collect();
@@ -46,11 +50,14 @@ async fn simply_plural_http_request_get_fronters(config: &Config) -> Result<Vec<
         .error_for_status()?
         .json()
         .await?;
-    
+
     Ok(result)
 }
 
-async fn simply_plural_http_get_members(config: &Config, system_id: &String) -> Result<Vec<Member>> {
+async fn simply_plural_http_get_members(
+    config: &Config,
+    system_id: &String,
+) -> Result<Vec<Member>> {
     eprintln!("Fetching all members from SimplyPlural..");
     let fronts_url = format!("{}/members/{}", &config.simply_plural_base_url, system_id);
     let result = config
@@ -65,7 +72,6 @@ async fn simply_plural_http_get_members(config: &Config, system_id: &String) -> 
 
     Ok(result)
 }
-
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct FrontEntry {
@@ -87,11 +93,11 @@ pub struct Member {
 #[derive(Deserialize, Debug, Clone)]
 pub struct MemberContent {
     pub name: String,
-    
+
     #[serde(rename = "avatarUrl")]
     #[serde(default)]
     pub avatar_url: String,
-    
+
     #[serde(default)]
     pub info: MemberContentInfo,
 }
@@ -105,6 +111,10 @@ pub struct MemberContentInfo {
 
 impl MemberContent {
     pub(crate) fn preferred_vrchat_status_name(&self) -> &String {
-        if self.info.vrchat_status_name.is_empty() { &self.name } else { &self.info.vrchat_status_name }
+        if self.info.vrchat_status_name.is_empty() {
+            &self.name
+        } else {
+            &self.info.vrchat_status_name
+        }
     }
 }

@@ -1,7 +1,10 @@
 use crate::config::Config;
 use crate::simply_plural::{self};
 use anyhow::Result;
-use rocket::{response::{self, content::RawHtml}, State};
+use rocket::{
+    response::{self, content::RawHtml},
+    State,
+};
 
 pub async fn run_server(config: &Config) -> Result<()> {
     rocket::build()
@@ -14,8 +17,11 @@ pub async fn run_server(config: &Config) -> Result<()> {
 }
 
 #[get("/fronting")]
-async fn rest_get_fronting(config: &State<Config>) -> Result<RawHtml<String>, response::Debug<anyhow::Error>> {
-    let fronts = simply_plural::fetch_fronts(config.inner()).await
+async fn rest_get_fronting(
+    config: &State<Config>,
+) -> Result<RawHtml<String>, response::Debug<anyhow::Error>> {
+    let fronts = simply_plural::fetch_fronts(config.inner())
+        .await
         .map_err(|e| response::Debug(e))?; // Convert anyhow::Error to response::Debug
     let html = generate_html(config.inner(), fronts);
     Ok(RawHtml(html))

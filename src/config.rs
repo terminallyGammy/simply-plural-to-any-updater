@@ -1,13 +1,11 @@
-
 use std::env::{self, var};
-use std::{fs, time};
 use std::path::Path;
 use std::process;
+use std::{fs, time};
 
-
-use time::Duration;
-use reqwest::Client;
 use anyhow::Result;
+use reqwest::Client;
+use time::Duration;
 
 #[derive(Debug, Clone, Default)]
 pub struct Config {
@@ -25,12 +23,12 @@ pub struct Config {
     pub vrchat_cookie: String,
 }
 
-const DEFAULTS_ENV_URL: &str = "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/defaults.env";
+const DEFAULTS_ENV_URL: &str =
+    "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/defaults.env";
 const VRCUPDATER_SAMPLE_ENV_URL: &str = "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/vrcupdater.sample.env";
 const VRC_ENV_PATH_STR: &str = "vrcupdater.env";
 
 pub(crate) async fn setup_and_load_config() -> Result<Config> {
-
     let client = Client::builder()
         .cookie_store(true)
         .build()
@@ -43,35 +41,51 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
     eprintln!("Loading environment variables...");
     let serve_api = str::eq(&var("SERVE_API").expect("SERVE_API not set."), "true");
     eprintln!("SERVE_API is {}.", serve_api);
-    
-    let system_name = if serve_api { var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.") } else { "".to_string() }; 
+
+    let system_name = if serve_api {
+        var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.")
+    } else {
+        "".to_string()
+    };
     let wait_seconds_uint = var("SECONDS_BETWEEN_UPDATES")
         .expect("SECONDS_BETWEEN_UPDATES not set.")
         .parse::<u64>()
         .unwrap();
     let wait_seconds = Duration::from_secs(wait_seconds_uint);
-    
+
     let simply_plural_token = var("SPS_API_TOKEN").expect("SPS_API_TOKEN not set");
     let simply_plural_base_url = var("SPS_API_BASE_URL").expect("SPS_API_BASE_URL not set.");
     eprintln!("Using Simply Plural Base URL: {}", simply_plural_base_url);
-    
-    let optional_vrchat_config = if serve_api { Ok("".to_string()) } else { Err("VRChat variables needs configuration.") };
-    
-    let vrchat_username = optional_vrchat_config.clone().or(var("VRCHAT_USERNAME")).expect("VRCHAT_USERNAME not set");
-    let vrchat_password = optional_vrchat_config.clone().or(var("VRCHAT_PASSWORD")).expect("VRCHAT_PASSWORD not set");
+
+    let optional_vrchat_config = if serve_api {
+        Ok("".to_string())
+    } else {
+        Err("VRChat variables needs configuration.")
+    };
+
+    let vrchat_username = optional_vrchat_config
+        .clone()
+        .or(var("VRCHAT_USERNAME"))
+        .expect("VRCHAT_USERNAME not set");
+    let vrchat_password = optional_vrchat_config
+        .clone()
+        .or(var("VRCHAT_PASSWORD"))
+        .expect("VRCHAT_PASSWORD not set");
     eprintln!("Credentials loaded. VRCHAT_USERNAME is {}", vrchat_username);
     let vrchat_cookie = var("VRCHAT_COOKIE").unwrap_or("".to_string());
     if !vrchat_cookie.is_empty() {
         eprintln!("A VRChat cookie was found and will be used.");
     };
-    let vrchat_updater_prefix = var("VRCHAT_UPDATER_PREFIX").expect("VRCHAT_UPDATER_PREFIX not set.");
-    let vrchat_updater_no_fronts = var("VRCHAT_UPDATER_NO_FRONTS").expect("VRCHAT_UPDATER_NO_FRONTS not set.");
+    let vrchat_updater_prefix =
+        var("VRCHAT_UPDATER_PREFIX").expect("VRCHAT_UPDATER_PREFIX not set.");
+    let vrchat_updater_no_fronts =
+        var("VRCHAT_UPDATER_NO_FRONTS").expect("VRCHAT_UPDATER_NO_FRONTS not set.");
     let vrchat_updater_truncate_names_to = var("VRCHAT_UPDATER_TRUNCATE_NAMES_TO")
         .expect("VRCHAT_UPDATER_TRUNCATE_NAMES_TO not set.")
         .parse::<usize>()
         .unwrap();
 
-    return Ok(Config{
+    return Ok(Config {
         simply_plural_token,
         vrchat_username,
         vrchat_password,
@@ -84,9 +98,8 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
         system_name,
         wait_seconds,
         client,
-    })
+    });
 }
-
 
 /// Sets up environment variables based on remote and local files for VRChat updater mode.
 pub async fn initialize_environment_for_updater(client: &Client) -> Result<()> {
@@ -101,7 +114,7 @@ pub async fn initialize_environment_for_updater(client: &Client) -> Result<()> {
     load_remote_defaults_env(client).await?;
 
     load_vrcupdater_env_or_create_for_user_and_exit(client).await?;
-    
+
     eprintln!("VRChat updater environment setup complete.");
     Ok(())
 }
@@ -125,8 +138,12 @@ async fn load_vrcupdater_env_or_create_for_user_and_exit(client: &Client) -> Res
         load_env_vars_from_string(&content, VRC_ENV_PATH_STR);
         eprintln!("Using local {}...", VRC_ENV_PATH_STR);
     } else {
-        eprintln!("{} not found. Creating sample environment file...", VRC_ENV_PATH_STR);
-        let sample_content = download_file_content_for_setup(VRCUPDATER_SAMPLE_ENV_URL, client).await?;
+        eprintln!(
+            "{} not found. Creating sample environment file...",
+            VRC_ENV_PATH_STR
+        );
+        let sample_content =
+            download_file_content_for_setup(VRCUPDATER_SAMPLE_ENV_URL, client).await?;
         fs::write(vrc_env_path, sample_content)?;
         eprintln!(
             "\n\n\n######### IMPORTANT #########\n\
@@ -142,7 +159,6 @@ async fn load_vrcupdater_env_or_create_for_user_and_exit(client: &Client) -> Res
     Ok(())
 }
 
-
 // Helper function to parse a string containing KEY=VALUE pairs and set them as environment variables.
 fn load_env_vars_from_string(content: &str, source_name: &str) {
     eprintln!("Loading environment variables from {} ...", source_name);
@@ -155,16 +171,17 @@ fn load_env_vars_from_string(content: &str, source_name: &str) {
 // If a line starting with VRC_COOKIE is defined in the file,
 // then we replace it with VRC_COOKIE="cookie_str".
 // Otherwise, we add such a line to the very end and save the file.
-pub(crate) async fn store_vrchat_cookie(cookie_str: &str) -> Result<()>{
+pub(crate) async fn store_vrchat_cookie(cookie_str: &str) -> Result<()> {
     let vrc_env_path = Path::new(VRC_ENV_PATH_STR);
     let content = fs::read_to_string(vrc_env_path)?;
     let new_cookie_line = format!("VRCHAT_COOKIE=\"{}\"", cookie_str);
     let cookie_key_prefix = "VRCHAT_COOKIE=";
 
     let mut lines: Vec<String> = content.lines().map(String::from).collect();
-    
-    if let Some(existing_line_idx) =
-        lines.iter().position(|line| line.trim_start().starts_with(cookie_key_prefix))
+
+    if let Some(existing_line_idx) = lines
+        .iter()
+        .position(|line| line.trim_start().starts_with(cookie_key_prefix))
     {
         lines[existing_line_idx] = new_cookie_line;
     } else {

@@ -2007,6 +2007,7 @@ dependencies = [
  "reqwest",
  "rocket",
  "serde",
+ "serde_json",
  "tokio",
  "vrchatapi",
 ]

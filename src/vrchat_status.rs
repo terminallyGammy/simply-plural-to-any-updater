@@ -32,7 +32,7 @@ fn clean_fronter_names(
     } else {
         fronts
             .iter()
-            .map(|m| clean_name_for_vrchat_status(m.preferred_vrchat_status_name()))
+            .map(|m| clean_name_for_vrchat_status(&m.preferred_vrchat_status_name()))
             .collect()
     }
 }
@@ -137,7 +137,7 @@ fn clean_name_for_vrchat_status(dirty_name: &str) -> String {
 mod tests {
     use super::*;
     use crate::config::Config;
-    use crate::simply_plural::{MemberContent, MemberContentInfo};
+    use crate::simply_plural::MemberContent;
 
     fn mock_config_for_format_tests(
         prefix: &str,
@@ -153,12 +153,16 @@ mod tests {
 
     // Helper function to create mock MemberContent
     fn mock_member_content(name: &str, vrchat_status_name: &str) -> MemberContent {
+        let info_as_json = if vrchat_status_name.is_empty() {
+            "{}".to_string()
+        } else {
+            format!("{{\"0\":\"{}\"}}", vrchat_status_name)
+        };
         MemberContent {
             name: name.to_string(),
             avatar_url: String::new(),
-            info: MemberContentInfo {
-                vrchat_status_name: vrchat_status_name.to_string(),
-            },
+            vrcsn_field_id: Some("0".to_string()),
+            info: serde_json::from_str(&info_as_json).unwrap(),
         }
     }
 

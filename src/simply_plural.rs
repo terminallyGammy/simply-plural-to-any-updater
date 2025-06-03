@@ -1,38 +1,59 @@
 use anyhow::Result;
 use serde::Deserialize;
+use serde_json;
 
 use crate::config::Config;
 
 pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
     let front_entries = simply_plural_http_request_get_fronters(config).await?;
 
-    let fronts = enrich_fronter_ids_with_member_info(front_entries, config).await?;
-
-    Ok(fronts)
-}
-
-async fn enrich_fronter_ids_with_member_info(
-    front_entries: Vec<FrontEntry>,
-    config: &Config,
-) -> Result<Vec<MemberContent>> {
     if front_entries.is_empty() {
         return Ok(vec![]);
     }
 
-    let system_id = &front_entries[0].content.uid;
+    let system_id = &front_entries[0].content.uid.clone();
+
+    let fronts = enrich_fronter_ids_with_member_info(front_entries, system_id, config).await?;
+
+    let vrcsn_field_id = get_vrchat_status_name_field_id(config, system_id).await?;
+
+    let fronts_with_vrchat_custom_field =
+        enrich_fronters_with_vrchat_status_field(fronts, vrcsn_field_id);
+
+    Ok(fronts_with_vrchat_custom_field)
+}
+
+fn enrich_fronters_with_vrchat_status_field(
+    fronts: Vec<MemberContent>,
+    vrcsn_field_id: Option<String>,
+) -> Vec<MemberContent> {
+    fronts
+        .iter()
+        .map(|m| {
+            let mut enriched_member = m.clone();
+            enriched_member.vrcsn_field_id = vrcsn_field_id.clone();
+            println!("Fronting member: {:?}", enriched_member);
+            enriched_member
+        })
+        .collect()
+}
+
+async fn enrich_fronter_ids_with_member_info(
+    front_entries: Vec<FrontEntry>,
+    system_id: &String,
+    config: &Config,
+) -> Result<Vec<MemberContent>> {
     let all_members = simply_plural_http_get_members(config, system_id).await?;
 
     let fronters: Vec<String> = front_entries
         .iter()
         .map(|e| e.content.member.clone())
         .collect();
+
     let enriched_fronting_members: Vec<MemberContent> = all_members
         .into_iter()
         .filter(|m| fronters.contains(&m.id))
-        .map(|m| {
-            eprintln!("Fronting member: {:?}", m.content);
-            m.content
-        })
+        .map(|m| m.content)
         .collect();
 
     return Ok(enriched_fronting_members);
@@ -52,6 +73,34 @@ async fn simply_plural_http_request_get_fronters(config: &Config) -> Result<Vec<
         .await?;
 
     Ok(result)
+}
+
+async fn get_vrchat_status_name_field_id(
+    config: &Config,
+    system_id: &String,
+) -> Result<Option<String>> {
+    eprintln!("Fetching custom fields from SimplyPlural...");
+    let custom_fields_url = format!(
+        "{}/customFields/{}",
+        &config.simply_plural_base_url, system_id
+    );
+    let custom_fields: Vec<CustomField> = config
+        .client
+        .get(&custom_fields_url)
+        .header("Authorization", &config.simply_plural_token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+
+    let vrchat_status_name_field = custom_fields
+        .iter()
+        .find(|field| field.content.name == "VRChat Status Name");
+
+    let field_id = vrchat_status_name_field.map(|field| &field.id);
+
+    Ok(field_id.cloned())
 }
 
 async fn simply_plural_http_get_members(
@@ -99,26 +148,39 @@ pub struct MemberContent {
     pub avatar_url: String,
 
     #[serde(default)]
-    pub info: MemberContentInfo,
-}
+    pub info: serde_json::Value,
+    // if the user uses the custom field "VRChat Status Name" on this member, then this will be
+    // { "<vrcsn_field_id>": "<vrcsn>", ...}
 
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct MemberContentInfo {
-    // This is the id of the custom field "VRChat Status Name" for the system of the developer
-    // This id seems to be not visible in the UI and can only be found in the JSON itself.
-    // Also, it seems to be different for everybody :(
-    // Hence, this won't be tested for now.
-    #[serde(rename = "683b8c2b7a5026a429000000")]
+    // this will be populated later after deserialisation
     #[serde(default)]
-    pub vrchat_status_name: String,
+    pub vrcsn_field_id: Option<String>,
 }
 
 impl MemberContent {
-    pub(crate) fn preferred_vrchat_status_name(&self) -> &String {
-        if self.info.vrchat_status_name.is_empty() {
-            &self.name
-        } else {
-            &self.info.vrchat_status_name
+    pub(crate) fn preferred_vrchat_status_name(&self) -> String {
+        match &self.vrcsn_field_id {
+            None => self.name.clone(),
+            Some(field_id) => self
+                .info
+                .as_object()
+                .map(|custom_fields| custom_fields.get(field_id))
+                .flatten()
+                .map(|value| value.as_str())
+                .flatten()
+                .map(|s| s.to_string())
+                .unwrap_or(self.name.clone()),
         }
     }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct CustomField {
+    pub id: String, // custom field id
+    pub content: CustomFieldContent,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct CustomFieldContent {
+    pub name: String,
 }

@@ -47,4 +47,7 @@ All functionality is implemented using Rust and various libraries.
 
 For developers, one can use `dev.*.run.sh` for local quick running.
 
+And run the files in `test` for testing. For the integration tests,
+you'll need to export the `SPS_API_TOKEN` and `SPS_API_WRITE_TOKEN` of the plural system used for tests.
+
 To create a release, simply push a corresponding tag - e.g. `v1.2.3`.

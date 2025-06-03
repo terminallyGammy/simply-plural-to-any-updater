@@ -104,8 +104,12 @@ pub struct MemberContent {
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct MemberContentInfo {
-    // this is the id of the custom field "VRChat Status Name"
+    // This is the id of the custom field "VRChat Status Name" for the system of the developer
+    // This id seems to be not visible in the UI and can only be found in the JSON itself.
+    // Also, it seems to be different for everybody :(
+    // Hence, this won't be tested for now.
     #[serde(rename = "683b8c2b7a5026a429000000")]
+    #[serde(default)]
     pub vrchat_status_name: String,
 }
 

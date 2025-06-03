@@ -6,6 +6,7 @@ on:
 
 jobs:
   test:
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,5 +25,11 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run tests
-        run: ./test.sh
+      - name: Unit tests
+        run: ./test/unit-tests.sh
+
+      - name: Webserver Integration Tests
+        env:
+          SPS_API_TOKEN: ${{ secrets.SPS_API_TOKEN }}
+          SPS_API_WRITE_TOKEN: ${{ secrets.SPS_API_WRITE_TOKEN }}
+        run: ./test/webserver.integration-tests.sh

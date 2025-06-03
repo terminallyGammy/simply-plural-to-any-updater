@@ -2,5 +2,4 @@
 
 set -euo pipefail
 
-cargo fmt
-
+rustfmt --edition 2021 src/**

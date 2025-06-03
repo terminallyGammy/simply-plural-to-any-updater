@@ -34,7 +34,7 @@ While most european letters and accents are supported, special things such as em
 Hence this tool removes them before forwarding them to VRChat. If you think something is being removed,
 while it's actually possible in the VRChat status, then shortly contact me and let me know (or write an issue).
 
-Furthermore, if a member has a name which cannot be represented at all, e.g. `💖⭐`, then you can define a new
+*NOTE: The following feature doesn't currently work due to limitations on SimplyPlural API*: Furthermore, if a member has a name which cannot be represented at all, e.g. `💖⭐`, then you can define a new
 custom field in your Simply Plural named `VRChat Status Name` and fill in a VRChat compatible name in that field,
 e.g. `Sparkle Star`. This way you can keep on using the proper name in Simply Plural while also having
 something readable in VRChat.

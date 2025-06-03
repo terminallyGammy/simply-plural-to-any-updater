@@ -36,11 +36,11 @@ async fn enrich_fronter_ids_with_member_info(front_entries: Vec<FrontEntry>, con
 
 async fn simply_plural_http_request_get_fronters(config: &Config) -> Result<Vec<FrontEntry>> {
     eprintln!("Fetching fronts from SimplyPlural...");
-    let fronts_url = format!("{}/fronters", &config.sps_base_url);
+    let fronts_url = format!("{}/fronters", &config.simply_plural_base_url);
     let result = config
         .client
         .get(&fronts_url)
-        .header("Authorization", &config.sps_token)
+        .header("Authorization", &config.simply_plural_token)
         .send()
         .await?
         .error_for_status()?
@@ -52,11 +52,11 @@ async fn simply_plural_http_request_get_fronters(config: &Config) -> Result<Vec<
 
 async fn simply_plural_http_get_members(config: &Config, system_id: &String) -> Result<Vec<Member>> {
     eprintln!("Fetching all members from SimplyPlural..");
-    let fronts_url = format!("{}/members/{}", &config.sps_base_url, system_id);
+    let fronts_url = format!("{}/members/{}", &config.simply_plural_base_url, system_id);
     let result = config
         .client
         .get(&fronts_url)
-        .header("Authorization", &config.sps_token)
+        .header("Authorization", &config.simply_plural_token)
         .send()
         .await?
         .error_for_status()?
@@ -101,4 +101,10 @@ pub struct MemberContentInfo {
     // this is the id of the custom field "VRChat Status Name"
     #[serde(rename = "683b8c2b7a5026a429000000")]
     pub vrchat_status_name: String,
+}
+
+impl MemberContent {
+    pub(crate) fn preferred_vrchat_status_name(&self) -> &String {
+        if self.info.vrchat_status_name.is_empty() { &self.name } else { &self.info.vrchat_status_name }
+    }
 }

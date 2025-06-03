@@ -1,23 +1,24 @@
 
 use std::env::{self, var};
-use std::fs;
+use std::{fs, time};
 use std::path::Path;
 use std::process;
 
 
+use time::Duration;
 use reqwest::Client;
 use anyhow::Result;
 
 #[derive(Debug, Clone, Default)]
 pub struct Config {
-    pub sps_token: String,
-    pub vrchat_username: String,
-    pub vrchat_password: String,
-    pub sps_base_url: String,
     pub client: Client,
     pub serve_api: bool,
-    pub wait_seconds: u64,
+    pub wait_seconds: Duration,
     pub system_name: String,
+    pub simply_plural_token: String,
+    pub simply_plural_base_url: String,
+    pub vrchat_username: String,
+    pub vrchat_password: String,
     pub vrchat_updater_prefix: String,
     pub vrchat_updater_no_fronts: String,
     pub vrchat_updater_truncate_names_to: usize,
@@ -41,23 +42,28 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
 
     eprintln!("Loading environment variables...");
     let serve_api = str::eq(&var("SERVE_API").expect("SERVE_API not set."), "true");
-    eprintln!("SERVE_API is {}", serve_api);
-
-    let sps_token = var("SPS_API_TOKEN").expect("SPS_API_TOKEN not set");
-
+    eprintln!("SERVE_API is {}.", serve_api);
+    
+    let system_name = if serve_api { var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.") } else { "".to_string() }; 
+    let wait_seconds_uint = var("SECONDS_BETWEEN_UPDATES")
+        .expect("SECONDS_BETWEEN_UPDATES not set.")
+        .parse::<u64>()
+        .unwrap();
+    let wait_seconds = Duration::from_secs(wait_seconds_uint);
+    
+    let simply_plural_token = var("SPS_API_TOKEN").expect("SPS_API_TOKEN not set");
+    let simply_plural_base_url = var("SPS_API_BASE_URL").expect("SPS_API_BASE_URL not set.");
+    eprintln!("Using Simply Plural Base URL: {}", simply_plural_base_url);
+    
     let optional_vrchat_config = if serve_api { Ok("".to_string()) } else { Err("VRChat variables needs configuration.") };
     
     let vrchat_username = optional_vrchat_config.clone().or(var("VRCHAT_USERNAME")).expect("VRCHAT_USERNAME not set");
     let vrchat_password = optional_vrchat_config.clone().or(var("VRCHAT_PASSWORD")).expect("VRCHAT_PASSWORD not set");
     eprintln!("Credentials loaded. VRCHAT_USERNAME is {}", vrchat_username);
-
     let vrchat_cookie = var("VRCHAT_COOKIE").unwrap_or("".to_string());
     if !vrchat_cookie.is_empty() {
         eprintln!("A VRChat cookie was found and will be used.");
     };
-
-    let system_name = if serve_api { var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.") } else { "".to_string() }; 
-
     let vrchat_updater_prefix = var("VRCHAT_UPDATER_PREFIX").expect("VRCHAT_UPDATER_PREFIX not set.");
     let vrchat_updater_no_fronts = var("VRCHAT_UPDATER_NO_FRONTS").expect("VRCHAT_UPDATER_NO_FRONTS not set.");
     let vrchat_updater_truncate_names_to = var("VRCHAT_UPDATER_TRUNCATE_NAMES_TO")
@@ -65,23 +71,15 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
         .parse::<usize>()
         .unwrap();
 
-    let wait_seconds = var("SECONDS_BETWEEN_UPDATES")
-        .expect("SECONDS_BETWEEN_UPDATES not set.")
-        .parse::<u64>()
-        .unwrap();
-    
-    let sps_base_url = var("SPS_API_BASE_URL").expect("SPS_API_BASE_URL not set.");
-    eprintln!("Using SPS base URL: {}", sps_base_url);
-
     return Ok(Config{
-        sps_token,
+        simply_plural_token,
         vrchat_username,
         vrchat_password,
         vrchat_cookie,
         vrchat_updater_prefix,
         vrchat_updater_no_fronts,
         vrchat_updater_truncate_names_to,
-        sps_base_url,
+        simply_plural_base_url,
         serve_api,
         system_name,
         wait_seconds,
@@ -147,7 +145,7 @@ async fn load_vrcupdater_env_or_create_for_user_and_exit(client: &Client) -> Res
 
 // Helper function to parse a string containing KEY=VALUE pairs and set them as environment variables.
 fn load_env_vars_from_string(content: &str, source_name: &str) {
-    eprintln!("Loading environment variables from {}...", source_name);
+    eprintln!("Loading environment variables from {} ...", source_name);
     for item in dotenvy::Iter::new(content.as_bytes()).filter_map(Result::ok) {
         env::set_var(item.0.clone(), item.1.clone());
     }

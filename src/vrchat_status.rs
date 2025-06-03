@@ -1,22 +1,32 @@
-use encoding_rs::ISO_8859_15;
-
 use crate::{config::Config, simply_plural};
+
+use encoding_rs::ISO_8859_15;
 
 const VRCHAT_MAX_ALLOWED_STATUS_LENGTH: usize = 23;
 
 pub(crate) fn format_fronts_for_vrchat_status(config: &Config, fronts: Vec<simply_plural::MemberContent>) -> String {
-    let cleaned_fronter_names: Vec<String> = if fronts.is_empty() {
-        vec![config.vrchat_updater_no_fronts.clone()] // Use configured string if no fronters
-    } else {
-        fronts.iter().map(|m| {
-            let name = if m.info.vrchat_status_name.is_empty() { &m.name } else { &m.info.vrchat_status_name };
-            clean_name_for_vrchat_status(name)
-        }).collect()
-    };
+    let cleaned_fronter_names = clean_fronter_names(fronts, &config.vrchat_updater_no_fronts);
     eprintln!("Cleaned fronter names for status: {:?}", cleaned_fronter_names);
 
+    let status_strings = compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_tradeoff(config, cleaned_fronter_names);
+    
+    pick_longest_string_within_vrchat_status_length_limit(status_strings)    
+}
+
+fn clean_fronter_names(fronts: Vec<simply_plural::MemberContent>, name_if_no_fronters: &String) -> Vec<String> {
+    if fronts.is_empty() {
+        vec![name_if_no_fronters.clone()] // Use configured string if no fronters
+    } else {
+        fronts
+            .iter()
+            .map(|m| clean_name_for_vrchat_status(m.preferred_vrchat_status_name()))
+            .collect()
+    }
+}
+
+fn compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_tradeoff(config: &Config, fronter_names: Vec<String>) -> Vec<String> {
     // Convert Vec<String> to Vec<&str> for convenient joining and slicing.
-    let fronter_names_as_str: Vec<&str> = cleaned_fronter_names.iter().map(String::as_str).collect();
+    let fronter_names_as_str: Vec<&str> = fronter_names.iter().map(String::as_str).collect();
 
     let long_string = format!("{} {}", config.vrchat_updater_prefix.as_str(), fronter_names_as_str.join(", "));
     let short_string = format!("{}{}", config.vrchat_updater_prefix.as_str(), fronter_names_as_str.join(","));
@@ -39,12 +49,17 @@ pub(crate) fn format_fronts_for_vrchat_status(config: &Config, fronts: Vec<simpl
     eprintln!("Long      string: '{}' ({})", long_string, long_string.len());
     eprintln!("Short     string: '{}' ({})", short_string, short_string.len());
     eprintln!("Truncated string: '{}' ({})", truncated_string, truncated_string.len());
-    
-    if long_string.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH { long_string }
-    else if short_string.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH { short_string }
-    else { truncated_string }
+
+    vec![long_string, short_string, truncated_string]
 }
 
+fn pick_longest_string_within_vrchat_status_length_limit(status_strings: Vec<String>) -> String {
+    status_strings.iter()
+        .filter(|s| s.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH)
+        .max_by_key(|s| s.len())
+        .unwrap()
+        .to_string()
+}
 
 // VRChat status messages does not display all UTF-8 characters.
 // This function removes all characters which are not of a specific encoding from the string.

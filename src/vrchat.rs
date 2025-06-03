@@ -1,7 +1,6 @@
 use crate::{config::Config, simply_plural, vrchat_auth, vrchat_status};
-use std::{thread, time};
+use std::thread;
 use anyhow::Result;
-use time::Duration;
 use vrchatapi::{
     apis::{configuration::Configuration, users_api},
     models::UpdateUserRequest,
@@ -15,28 +14,26 @@ pub async fn run_updater_loop(config: &Config) -> Result<()> {
         eprintln!("\n\n======================= UTC {}", Utc::now().format("%Y-%m-%d %H:%M:%S"));
 
         let fronts = simply_plural::fetch_fronts(&config).await?;
+
+        let status_string = vrchat_status::format_fronts_for_vrchat_status(config, fronts);
         
-        update_fronts_in_vrchat_status(&config, &vrchat_config, &user_id, fronts).await?;
+        set_vrchat_status(&vrchat_config, &user_id, status_string).await?;
         
-        eprintln!("Waiting {}s for next update trigger...", config.wait_seconds);
-        thread::sleep(Duration::from_secs(config.wait_seconds));
+        eprintln!("Waiting {}s for next update trigger...", config.wait_seconds.as_secs());
+
+        thread::sleep(config.wait_seconds);
     }
 }
 
-async fn update_fronts_in_vrchat_status(
-    config: &Config,
-    vrchat_config: &Configuration,
-    user_id: &String,
-    fronts: Vec<simply_plural::MemberContent>,
-) -> Result<()> {
-    let status_string = vrchat_status::format_fronts_for_vrchat_status(config, fronts);
-
+async fn set_vrchat_status(vrchat_config: &Configuration, user_id: &String, status_string: String) -> Result<()> {
     let mut update_request = UpdateUserRequest::new();
     update_request.status_description = Some(status_string.clone());
 
-    match users_api::update_user(vrchat_config, &user_id, Some(update_request)).await {
+    let update_result = users_api::update_user(vrchat_config, &user_id, Some(update_request)).await;
+
+    match update_result {
         Ok(_) => eprintln!("VRChat status updated successfully to: '{}'", status_string),
-        Err(err) => eprintln!("VRChat status failed to be updated. Error: {}", err),
+        Err(err) => eprintln!("❌❌❌ VRChat status failed to be updated. Error: {}", err),
     }
 
     Ok(())

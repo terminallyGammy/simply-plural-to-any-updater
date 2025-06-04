@@ -33,8 +33,23 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
 
-    - name: Run tests
-      run: "./test.sh"
+    - name: Unit tests
+      run: ./test/unit-tests.sh
+
+    - name: Webserver Integration Tests
+      env:
+        SPS_API_TOKEN: ${{ secrets.SPS_API_TOKEN }}
+        SPS_API_WRITE_TOKEN: ${{ secrets.SPS_API_WRITE_TOKEN }}
+      run: ./test/webserver.integration-tests.sh
+
+    - name: VRC Updater Integration Tests
+      env:
+        SPS_API_TOKEN: ${{ secrets.SPS_API_TOKEN }}
+        SPS_API_WRITE_TOKEN: ${{ secrets.SPS_API_WRITE_TOKEN }}
+        VRCHAT_USERNAME: ${{ secrets.VRCHAT_USERNAME }}
+        VRCHAT_PASSWORD: ${{ secrets.VRCHAT_PASSWORD }}
+        VRCHAT_COOKIE: ${{ secrets.VRCHAT_COOKIE }}
+      run: ./test/vrcupdater.integration-tests.sh
 
     - name: Run build script
       run: "./build-binaries.sh"

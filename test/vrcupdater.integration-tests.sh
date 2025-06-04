@@ -54,8 +54,9 @@ check_system_fronts_set() {
 check_vrc_status_string_equals() {
     EXPECTED="$1"
 
-    RESPONSE="$(curl -s -X GET "https://api.vrchat.cloud/api/1/auth/user" \
+    RESPONSE="$(curl -s "https://api.vrchat.cloud/api/1/auth/user" \
         --cookie "$VRCHAT_COOKIE" \
+        -u "$VRCHAT_USERNAME:$VRCHAT_PASSWORD" \
         -H "User-Agent: SimplyPluralToVRChatUpdaterTest/0.1.0 does-not-exist-792374@gmail.com"
     )"
 
@@ -79,7 +80,7 @@ VRCHAT_PASSWORD=\"$VRCHAT_PASSWORD\"
 VRCHAT_COOKIE=\"$VRCHAT_COOKIE\"
     " >> vrcupdater.env
 
-    ( ./target/release/sps_status 2>&1 | sed 's/^/VRC Updater | /g' ) &
+    ./target/release/sps_status &
 
     sleep 5s
 

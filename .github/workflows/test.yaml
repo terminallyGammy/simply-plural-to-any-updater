@@ -2,7 +2,7 @@ name: Run Tests
 
 on:
   push:
-    branches: '*'
+    branches: '**'
 
 jobs:
   test:
@@ -41,4 +41,4 @@ jobs:
           VRCHAT_USERNAME: ${{ secrets.VRCHAT_USERNAME }}
           VRCHAT_PASSWORD: ${{ secrets.VRCHAT_PASSWORD }}
           VRCHAT_COOKIE: ${{ secrets.VRCHAT_COOKIE }}
-        run: ":" # ./test/vrcupdater.integration-tests.sh # works locally but not yet on CI
+        run: ./test/vrcupdater.integration-tests.sh # works locally but not yet on CI

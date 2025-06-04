@@ -27,7 +27,7 @@ set_system_fronts_set() {
 set_to_front() {
     MEMBER_ID="$1"
     FRONT_ID="$(openssl rand -hex 12)" # produces valid 24 hexdec digits
-    curl -s --fail-with-body -L "https://api.apparyllis.com/v1/frontHistory/$FRONT_ID" \
+    curl --silent --fail-with-body -L "https://api.apparyllis.com/v1/frontHistory/$FRONT_ID" \
         -H 'Content-Type: application/json' \
         -H "Authorization: $SPS_API_WRITE_TOKEN" \
         -d "{
@@ -45,7 +45,7 @@ clear_all_fronts() {
     echo "Clearing all active fronts."
 
     FRONTER_IDS="$(
-        curl --silent --fail-with-body \
+        curl --silent \
             -L 'https://api.apparyllis.com/v1/fronters/' \
             -H "Authorization: $SPS_API_WRITE_TOKEN" |
             jq -r '.[].id'
@@ -57,7 +57,7 @@ clear_all_fronts() {
 
     while read fronter_id; do
         echo "Clearing front (id=$fronter_id)"
-        curl -L -X PATCH "https://api.apparyllis.com/v1/frontHistory/$fronter_id" \
+        curl --silent -L -X PATCH "https://api.apparyllis.com/v1/frontHistory/$fronter_id" \
             -H 'Content-Type: application/json' \
             -H "Authorization: $SPS_API_WRITE_TOKEN" \
             -d '{

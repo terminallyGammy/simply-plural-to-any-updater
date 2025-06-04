@@ -5,3 +5,6 @@ target
 *.env
 !defaults.env
 !vrcupdater.sample.env
+
+# tmp files
+tmp.log

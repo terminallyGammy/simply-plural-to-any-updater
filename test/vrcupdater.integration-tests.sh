@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/bash -i
+# interactive mode to avoid buffering issues
 
 set -euo pipefail
 
@@ -79,7 +80,7 @@ VRCHAT_PASSWORD=\"$VRCHAT_PASSWORD\"
 VRCHAT_COOKIE=\"$VRCHAT_COOKIE\"
     " >> vrcupdater.env
 
-    (./target/release/sps_status 2>&1 | sed 's/^/VRC Updater | /g' ) & 
+    ( ./target/release/sps_status 2>&1 | sed 's/^/VRC Updater | /g' ) &
 
     sleep 5s
 

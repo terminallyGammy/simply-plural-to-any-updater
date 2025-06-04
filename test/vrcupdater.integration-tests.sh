@@ -1,5 +1,4 @@
-#!/bin/bash -i
-# interactive mode to avoid buffering issues
+#!/bin/bash
 
 set -euo pipefail
 

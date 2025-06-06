@@ -52,3 +52,6 @@ you'll need to export the `SPS_API_TOKEN` and `SPS_API_WRITE_TOKEN` of the plura
 as well as `VRCHAT_USERNAME`, `VRCHAT_PASSWORD` and `VRCHAT_COOKIE` of the VRC test user.
 
 To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
+
+### Next tasks
+* streamline building for deployment. either make slim build or build on github and then import for deployment.

@@ -1,17 +1,11 @@
-FROM rust:1-bullseye
+FROM debian:12
 
 WORKDIR /app
 
-# docker build caching based on
-# https://stackoverflow.com/a/58474618
-# dummy build
-COPY Cargo.* ./
-RUN mkdir src && echo "fn main() {}" > src/dummy.rs
-RUN cargo build --bin download_only --release
+RUN apt update && apt install -y openssl
 
-# proper build
-COPY Cargo.* ./
-COPY src src
-RUN cargo build --release
+COPY ./target/SP2VRC-Linux ./
 
-CMD ["./target/release/sps_status"]
+RUN chmod +x ./*
+
+CMD ["./SP2VRC-Linux"]

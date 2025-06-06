@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker compose down || true
+docker compose -f server.docker-compose.yml down || true

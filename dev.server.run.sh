@@ -3,7 +3,7 @@
 set -euo pipefail
 
 echo "Build..."
-cargo build --bin sps_status --release
+cargo build --release
 echo "Done."
 
 echo "Run:"

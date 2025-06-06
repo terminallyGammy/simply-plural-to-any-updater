@@ -14,6 +14,7 @@ set -euo pipefail
 
 source ./test/plural_system_to_test.sh
 
+SECONDS_BETWEEN_UPDATES=10
 
 main() {
     stop_vrc_updater
@@ -26,7 +27,7 @@ main() {
     
     set_system_fronts_set "B"
 
-    sleep 60s
+    sleep "$SECONDS_BETWEEN_UPDATES"s
 
     check_system_fronts_set "B"
 
@@ -69,7 +70,7 @@ check_vrc_status_string_equals() {
 
 
 start_vrc_updater() {
-    cargo build --bin sps_status --release
+    cargo build --release
 
     rm -rf vrcupdater.env || true
 
@@ -78,6 +79,7 @@ SPS_API_TOKEN=\"$SPS_API_TOKEN\"
 VRCHAT_USERNAME=\"$VRCHAT_USERNAME\"
 VRCHAT_PASSWORD=\"$VRCHAT_PASSWORD\"
 VRCHAT_COOKIE=\"$VRCHAT_COOKIE\"
+SECONDS_BETWEEN_UPDATES=\"$SECONDS_BETWEEN_UPDATES\"
     " >> vrcupdater.env
 
     ./target/release/sps_status &

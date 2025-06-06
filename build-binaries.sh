@@ -41,7 +41,7 @@ build_binaries() {
 
     for target in "${TARGETS[@]}"; do
         echo "[$target] "
-        cargo build --release --target "$target" --bin "${PROJECT_BINARY_NAME}"
+        cargo build --release --target "$target"
         echo "[$target] Cargo build successful."
 
         # Determine PLATFORM and .exe suffix based on the target triple

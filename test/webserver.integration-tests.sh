@@ -51,7 +51,7 @@ check_system_fronts_set() {
 WEBSERVER_FRONTING_URL="http://0.0.0.0:8000/fronting"
 
 start_webserver() {
-    cargo build --bin sps_status --release
+    cargo build --release
     
     set -a; source defaults.env; set +a
     export SPS_API_TOKEN

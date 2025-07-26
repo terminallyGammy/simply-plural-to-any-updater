@@ -19,6 +19,7 @@ SECONDS_BETWEEN_UPDATES=10
 main() {
     stop_vrc_updater
 
+
     set_system_fronts_set "A"
     
     start_vrc_updater
@@ -30,6 +31,16 @@ main() {
     sleep "$SECONDS_BETWEEN_UPDATES"s
 
     check_system_fronts_set "B"
+
+
+    stop_vrc_updater
+
+    setup_sp_rest_failure
+
+    start_vrc_updater
+
+    check_updater_failure_and_loop_continues
+
 
     stop_vrc_updater
 
@@ -69,6 +80,19 @@ check_vrc_status_string_equals() {
 }
 
 
+setup_sp_rest_failure() {
+    FUNCTIONAL_SPS_API_TOKEN="$SPS_API_TOKEN"
+    SPS_API_TOKEN="invalid"
+}
+
+check_updater_failure_and_loop_continues() {
+    SPS_API_TOKEN="$FUNCTIONAL_SPS_API_TOKEN"
+    grep -q "Error in VRChat Updater Loop" .log
+    grep -q "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..." .log
+}
+
+
+
 start_vrc_updater() {
     cargo build --release
 
@@ -82,7 +106,7 @@ VRCHAT_COOKIE=\"$VRCHAT_COOKIE\"
 SECONDS_BETWEEN_UPDATES=\"$SECONDS_BETWEEN_UPDATES\"
     " >> vrcupdater.env
 
-    ./target/release/sps_status &
+    (./target/release/sps_status 2>&1 | tee .log | sed 's/^/vrcupdater | /' ) &
 
     sleep 5s
 

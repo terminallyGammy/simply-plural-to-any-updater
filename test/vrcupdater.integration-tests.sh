@@ -106,7 +106,7 @@ VRCHAT_COOKIE=\"$VRCHAT_COOKIE\"
 SECONDS_BETWEEN_UPDATES=\"$SECONDS_BETWEEN_UPDATES\"
     " >> vrcupdater.env
 
-    (./target/release/sps_status 2>&1 | tee .log | sed 's/^/vrcupdater | /' ) &
+    (./target/release/sps_status 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
 
     sleep 5s
 

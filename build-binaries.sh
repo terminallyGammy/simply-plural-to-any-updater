@@ -41,7 +41,7 @@ build_binaries() {
 
     for target in "${TARGETS[@]}"; do
         echo "[$target] "
-        ./tauri-build.sh --target "$target"
+        ./cargo-build.sh --target "$target"
         echo "[$target] Cargo build successful."
 
         # Determine PLATFORM and .exe suffix based on the target triple

@@ -8,3 +8,6 @@ target
 
 # Log files
 *.log
+
+# tauri
+gen/schemas/

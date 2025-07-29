@@ -2,6 +2,7 @@
 name = "sps_status"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.87.0"
 
 [[bin]]
 name = "sps_status"
@@ -10,12 +11,19 @@ path = "src/main.rs"
 [dependencies]
 chrono = "0.4"
 rocket = "0.5"
-anyhow = "1.0"
+anyhow = "1"
 dotenvy = "0.15"
-vrchatapi = "1.0"
+vrchatapi = "1"
 encoding_rs = "0.8"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1.0"
-html-escape = "0.2.13"
+serde_json = "1"
+html-escape = "0.2"
+tauri = { version = "2", features = [] }
+tauri-plugin-log = "2"
+log = "0.4"
+clap = { version = "4", features = [ "derive"] }
+
+[build-dependencies]
+tauri-build = { version = "2.2", features = [] }

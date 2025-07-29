@@ -11,13 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
+      - name: Install Rust, Cargo and rustup
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Tauri prerequisites
+      - name: Install prerequisites
         run: |
           sudo apt update
-          sudo apt install \
+
+          # Tauri
+          cargo install tauri-cli --version "^2" --locked
+          sudo apt-get install \
             libwebkit2gtk-4.1-dev \
             build-essential \
             curl \
@@ -27,6 +30,9 @@ jobs:
             libssl-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev
+
+          # MinGW toolchains for Windows targets
+          sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
 
       - name: Cache Cargo dependencies
         uses: actions/cache@v4
@@ -38,9 +44,6 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build
-        run: ./cargo-build.sh
 
       - name: Unit tests
         run: ./test/unit-tests.sh

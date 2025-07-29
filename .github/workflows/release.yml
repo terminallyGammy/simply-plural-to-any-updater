@@ -73,6 +73,9 @@ jobs:
       run: |
         ./generate-changelog.sh "${{ github.ref_name }}" RELEASE_NOTES.md
         echo "notes_file=RELEASE_NOTES.md" >> $GITHUB_OUTPUT
+        
+        IS_PRERELEASE="$( [[ "${{ github.ref_name }}" == *"-"* ]] && echo "true" || echo "false" )"
+        echo "IS_PRERELEASE=$IS_PRERELEASE" >> $GITHUB_ENV
 
     - name: Create Release and Upload Assets
       uses: softprops/action-gh-release@v2
@@ -80,3 +83,4 @@ jobs:
         token: ${{ secrets.DEPLOY_TOKEN }}
         files: "target/release_builds/*"
         body_path: ${{ steps.changelog.outputs.notes_file }}
+        prerelease: ${{ env.IS_PRERELEASE }}

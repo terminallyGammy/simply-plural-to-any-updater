@@ -49,11 +49,17 @@ There are a few breaking changes in how to run this program:
 
 Follow [these steps to install tauri](https://tauri.app/start/prerequisites/) for the rust GUI for local development.
 
+Build without tauri: `./release/cargo-build.sh`
+Build with tauri: `./dev/tauri-build.sh`
+Build with tauri with live server and hot replacement: `./dev/tauri-dev.sh`
+
+Format: `./release/format.sh`
+
 The environment variables are documented in `defaults.env` and `vrcupdater.sample.env`.
 
 All functionality is implemented using Rust and various libraries.
 
-For developers, one can use `dev.*.run.sh` for local quick running.
+For developers, one can use `/dev/*.run.sh` for local quick running.
 
 And run the files in `test` for testing. For the integration tests,
 you'll need to export the `SPS_API_TOKEN` and `SPS_API_WRITE_TOKEN` of the plural system used for tests - 

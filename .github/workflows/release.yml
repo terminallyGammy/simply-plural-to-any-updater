@@ -67,12 +67,12 @@ jobs:
       run: ./test/vrcupdater.integration-tests.sh
 
     - name: Run build script
-      run: "./build-binaries.sh"
+      run: "./release-build.sh"
 
     - name: Generate changelog
       id: changelog
       run: |
-        ./generate-changelog.sh "${{ github.ref_name }}" RELEASE_NOTES.md
+        ./release/generate-changelog.sh "${{ github.ref_name }}" RELEASE_NOTES.md
         echo "notes_file=RELEASE_NOTES.md" >> $GITHUB_OUTPUT
         
         IS_PRERELEASE="$( [[ "${{ github.ref_name }}" == *"-"* ]] && echo "true" || echo "false" )"

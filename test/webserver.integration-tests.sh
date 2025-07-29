@@ -11,7 +11,7 @@ source ./test/plural_system_to_test.sh
 main() {
     stop_webserver
 
-    ./cargo-build.sh
+    ./release/cargo-build.sh
 
     start_webserver
 

@@ -19,7 +19,7 @@ SECONDS_BETWEEN_UPDATES=10
 main() {
     stop_vrc_updater
 
-    ./cargo-build.sh
+    ./release/cargo-build.sh
 
     set_system_fronts_set "A"
     

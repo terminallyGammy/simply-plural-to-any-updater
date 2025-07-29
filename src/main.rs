@@ -4,8 +4,7 @@
 #[macro_use]
 extern crate rocket;
 
-use anyhow::Result;
-use clap::{Parser, self};
+use clap::{self, Parser};
 use tokio::runtime;
 
 mod config;
@@ -14,52 +13,22 @@ mod vrchat;
 mod vrchat_auth;
 mod vrchat_status;
 mod webserver;
-
+mod gui;
+mod app;
 
 fn main() {
     let cli_args = Cli::parse();
 
     if cli_args.no_gui {
         eprintln!("Running console mode...");
-        runtime::Runtime::new().unwrap().block_on(run_app_logic()).unwrap()
+        runtime::Runtime::new()
+            .unwrap()
+            .block_on(app::run_app_logic())
+            .unwrap()
     } else {
         eprintln!("Starting tauri GUI...");
-        run_tauri_gui().unwrap()
+        gui::run_tauri_gui().unwrap()
     }
-}
-
-
-fn run_tauri_gui() -> Result<(), anyhow::Error> {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::new().build())
-        .setup(move |_app| {
-            eprintln!("Tauri application setup complete. Spawning core logic...");
-
-            tauri::async_runtime::spawn(async move {
-                run_app_logic().await.unwrap()
-            });
-
-            Ok(())
-        })
-        .run(tauri::generate_context!())
-        .map_err(anyhow::Error::from)
-}
-
-
-async fn run_app_logic() -> Result<()> {
-    eprintln!("Starting Simply Plural to Any Updater...");
-
-    let config = config::setup_and_load_config().await?;
-
-    if config.serve_api {
-        eprintln!("Running in Webserver mode.");
-        webserver::run_server(&config).await?;
-    } else {
-        eprintln!("Running in VRChat Updater mode.");
-        vrchat::run_updater_loop(&config).await?;
-    }
-
-    Ok(())
 }
 
 #[derive(Parser, Debug)]
@@ -68,4 +37,6 @@ struct Cli {
     /// Run without the graphical user interface
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     no_gui: bool,
+
+    // todo. refactor this to have te webserver in this place here instead of it being possible to be invoked with the gui together
 }

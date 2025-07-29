@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::simply_plural::{self};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use rocket::{
     response::{self, content::RawHtml},
     State,
@@ -12,7 +12,7 @@ pub async fn run_server(config: &Config) -> Result<()> {
         .mount("/", routes![rest_get_fronting])
         .launch()
         .await
-        .map_err(|e| anyhow::anyhow!("Rocket failed with: {}", e))
+        .map_err(|e| anyhow!(e))
         .map(|_| ())
 }
 

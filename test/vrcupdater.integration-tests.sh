@@ -19,6 +19,7 @@ SECONDS_BETWEEN_UPDATES=10
 main() {
     stop_vrc_updater
 
+    ./cargo-build.sh
 
     set_system_fronts_set "A"
     
@@ -94,8 +95,6 @@ check_updater_failure_and_loop_continues() {
 
 
 start_vrc_updater() {
-    ./cargo-build.sh
-
     rm -rf vrcupdater.env || true
 
     echo "
@@ -106,7 +105,7 @@ VRCHAT_COOKIE=\"$VRCHAT_COOKIE\"
 SECONDS_BETWEEN_UPDATES=\"$SECONDS_BETWEEN_UPDATES\"
     " >> vrcupdater.env
 
-    (./target/release/sps_status 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
+    (./target/release/sps_status --no-gui 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
 
     sleep 5s
 

@@ -11,6 +11,8 @@ source ./test/plural_system_to_test.sh
 main() {
     stop_webserver
 
+    ./cargo-build.sh
+
     start_webserver
 
     set_system_fronts_set "A"
@@ -51,14 +53,12 @@ check_system_fronts_set() {
 WEBSERVER_FRONTING_URL="http://0.0.0.0:8000/fronting"
 
 start_webserver() {
-    ./cargo-build.sh
-    
     set -a; source defaults.env; set +a
     export SPS_API_TOKEN
     export SERVE_API=true
     export SYSTEM_PUBLIC_NAME="SP-Updater-Test"
 
-    (./target/release/sps_status 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
+    (./target/release/sps_status --no-gui 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
 
     sleep 1s
 

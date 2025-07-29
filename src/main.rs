@@ -4,8 +4,10 @@
 #[macro_use]
 extern crate rocket;
 
-use clap::{self, Parser};
+use std::future::Future;
+use config::setup_and_load_config;
 use tokio::runtime;
+use clap::{self, Parser};
 
 mod config;
 mod simply_plural;
@@ -14,29 +16,29 @@ mod vrchat_auth;
 mod vrchat_status;
 mod webserver;
 mod gui;
-mod app;
 
 fn main() {
-    let cli_args = Cli::parse();
+    let cli_args = config::CliArgs::parse();
+
+    let config = run_async_blocking(setup_and_load_config(&cli_args)).unwrap();
+
+    if cli_args.webserver {
+        eprintln!("Running in Webserver mode ...");
+        run_async_blocking(webserver::run_server(config.clone())).unwrap();
+        return;
+    }
 
     if cli_args.no_gui {
-        eprintln!("Running console mode...");
-        runtime::Runtime::new()
-            .unwrap()
-            .block_on(app::run_app_logic())
-            .unwrap()
+        eprintln!("Running SP2Any Updater in console mode ...");
+        run_async_blocking(vrchat::run_updater_loop(&config)).unwrap();
     } else {
-        eprintln!("Starting tauri GUI...");
-        gui::run_tauri_gui().unwrap()
+        eprintln!("Starting SP2Any Updater in GUI mode ...");
+        gui::run_tauri_gui(config.clone()).unwrap()
     }
 }
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Cli {
-    /// Run without the graphical user interface
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
-    no_gui: bool,
-
-    // todo. refactor this to have te webserver in this place here instead of it being possible to be invoked with the gui together
+fn run_async_blocking<T>(f: impl Future<Output = T>) -> T {
+    runtime::Runtime::new()
+        .unwrap()
+        .block_on(f)
 }

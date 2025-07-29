@@ -8,6 +8,8 @@ use vrchatapi::{
 };
 
 pub async fn run_updater_loop(config: &Config) -> Result<()> {
+    eprintln!("Running VRChat Updater ...");
+
     let (vrchat_config, user_id) = vrchat_auth::authenticate_vrchat(config).await?;
 
     loop {

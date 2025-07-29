@@ -9,5 +9,5 @@ echo "Done."
 echo "Run:"
 set -a; source defaults.env; set +a
 set -a; source dev.server.env; set +a
-./target/release/sps_status --no-gui
+./target/release/sps_status --webserver
 

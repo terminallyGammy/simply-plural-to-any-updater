@@ -8,4 +8,4 @@ COPY ./target/SP2VRC-Linux ./
 
 RUN chmod +x ./*
 
-CMD ["./SP2VRC-Linux", "--no-gui"]
+CMD ["./SP2VRC-Linux", "--webserver"]

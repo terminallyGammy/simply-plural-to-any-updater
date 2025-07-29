@@ -39,6 +39,12 @@ custom field in your Simply Plural named `VRChat Status Name` and fill in a VRCh
 e.g. `Sparkle Star`. This way you can keep on using the proper name in Simply Plural while also having
 something readable in VRChat.
 
+## Migrate from v1 to v2
+
+There are a few breaking changes in how to run this program:
+* `SERVE_API` is removed. If it was `true`, then instead invoke the program with `--webserver`. Otherwise don't use this argument.
+* The program now opens a GUI by default. If you want to keep on using the console only (old behavior), invoke the program with `--no-gui`.
+
 ## For Developers
 
 Follow [these steps to install tauri](https://tauri.app/start/prerequisites/) for the rust GUI for local development.

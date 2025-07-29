@@ -2,15 +2,27 @@ use std::env::{self, var};
 use std::path::Path;
 use std::process;
 use std::{fs, time};
-
 use anyhow::Result;
 use reqwest::Client;
 use time::Duration;
+use clap::{self, Parser};
+
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+pub struct CliArgs {
+    /// Run without the graphical user interface
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    pub no_gui: bool,
+
+    // Run in webserver mode. Implies no_gui.
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    pub webserver: bool,
+}
+
 
 #[derive(Debug, Clone, Default)]
 pub struct Config {
     pub client: Client,
-    pub serve_api: bool,
     pub wait_seconds: Duration,
     pub system_name: String,
     pub simply_plural_token: String,
@@ -24,11 +36,11 @@ pub struct Config {
 }
 
 const DEFAULTS_ENV_URL: &str =
-    "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/defaults.env";
+    "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/defaults.v2.env";
 const VRCUPDATER_SAMPLE_ENV_URL: &str = "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/vrcupdater.sample.env";
 const VRC_ENV_PATH_STR: &str = "vrcupdater.env";
 
-pub(crate) async fn setup_and_load_config() -> Result<Config> {
+pub(crate) async fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
     let client = Client::builder()
         .cookie_store(true)
         .build()
@@ -39,10 +51,7 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
     initialize_environment_for_updater(&client).await?;
 
     eprintln!("Loading environment variables...");
-    let serve_api = str::eq(&var("SERVE_API").expect("SERVE_API not set."), "true");
-    eprintln!("SERVE_API is {}.", serve_api);
-
-    let system_name = if serve_api {
+    let system_name = if cli_args.webserver {
         var("SYSTEM_PUBLIC_NAME").expect("SYSTEM_PUBLIC_NAME not set.")
     } else {
         "".to_string()
@@ -57,7 +66,7 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
     let simply_plural_base_url = var("SPS_API_BASE_URL").expect("SPS_API_BASE_URL not set.");
     eprintln!("Using Simply Plural Base URL: {}", simply_plural_base_url);
 
-    let optional_vrchat_config = if serve_api {
+    let optional_vrchat_config = if cli_args.webserver {
         Ok("".to_string())
     } else {
         Err("VRChat variables needs configuration.")
@@ -94,7 +103,6 @@ pub(crate) async fn setup_and_load_config() -> Result<Config> {
         vrchat_updater_no_fronts,
         vrchat_updater_truncate_names_to,
         simply_plural_base_url,
-        serve_api,
         system_name,
         wait_seconds,
         client,

@@ -6,9 +6,9 @@ use rocket::{
     State,
 };
 
-pub async fn run_server(config: &Config) -> Result<()> {
+pub async fn run_server(config: Config) -> Result<()> {
     rocket::build()
-        .manage(config.clone()) // Rocket needs the owned or shareable Config
+        .manage(config)
         .mount("/", routes![rest_get_fronting])
         .launch()
         .await

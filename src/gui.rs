@@ -2,15 +2,16 @@
 use anyhow::{anyhow, Result};
 use tauri::{self, tray::TrayIcon};
 
-use crate::app;
+use crate::{config::Config, vrchat};
 
-pub fn run_tauri_gui() -> Result<(), anyhow::Error> {
+pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
+
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         .setup(move |app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 
-            tauri::async_runtime::spawn(async move { app::run_app_logic().await.unwrap() });
+            tauri::async_runtime::spawn(async move { vrchat::run_updater_loop(&config).await.unwrap() });
 
             tauri_system_tray_handler(app)?;
 

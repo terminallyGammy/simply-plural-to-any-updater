@@ -58,7 +58,7 @@ start_webserver() {
     export SERVE_API=true
     export SYSTEM_PUBLIC_NAME="SP-Updater-Test"
 
-    (./target/release/sps_status --no-gui 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
+    (./target/release/sps_status --webserver 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
 
     sleep 1s
 

@@ -38,6 +38,7 @@ set_to_front() {
             \"member\": \"$MEMBER_ID\"
         }" > /dev/null
     echo "Set member $MEMBER_ID to front (id: $FRONT_ID)."
+    rate_limiting_delay
 }
 
 
@@ -68,4 +69,10 @@ clear_all_fronts() {
                 "custom": false
             }'
     done <<< "$FRONTER_IDS"
+
+    rate_limiting_delay
+}
+
+rate_limiting_delay() {
+    sleep 1s
 }

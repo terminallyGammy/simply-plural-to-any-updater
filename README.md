@@ -53,7 +53,7 @@ Build without tauri: `./release/cargo-build.sh`
 Build with tauri: `./dev/tauri-build.sh`
 Build with tauri with live server and hot replacement: `./dev/tauri-dev.sh`
 
-Format: `./release/format.sh`
+Lint and Format: `./release/lint.sh`
 
 The environment variables are documented in `defaults.env` and `vrcupdater.sample.env`.
 

@@ -19,7 +19,7 @@ so you won't need to input your 2FA code that often.
 
 ## SimplyPlural to Website
 
-When running as a website (`SERVE_API=true`), it serves an endpoint `/fronting`
+When running as a website `--webserver`, it serves an endpoint `/fronting`
 and provides a HTML page with the current fronting status (from SimplyPlural)
 as a well-rendered UI.
 
@@ -66,3 +66,12 @@ you'll need to export the `SPS_API_TOKEN` and `SPS_API_WRITE_TOKEN` of the plura
 as well as `VRCHAT_USERNAME`, `VRCHAT_PASSWORD` and `VRCHAT_COOKIE` of the VRC test user.
 
 To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
+
+### Current Migration
+
+Migrate from directory local .env files to storing a .json in the home directoy.
+That can be manually edited as well as configured via the GUI.
+
+* default behavior for default configuration remains same
+* GUI fetches and displays values from JSON
+* don't offer a way to migrate from old .env file. keep code simple there.

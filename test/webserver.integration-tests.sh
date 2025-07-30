@@ -55,7 +55,6 @@ WEBSERVER_FRONTING_URL="http://0.0.0.0:8000/fronting"
 start_webserver() {
     set -a; source defaults.env; set +a
     export SPS_API_TOKEN
-    export SERVE_API=true
     export SYSTEM_PUBLIC_NAME="SP-Updater-Test"
 
     (./target/release/sps_status --webserver 2>&1 | tee .log | sed 's/^/sps_status | /' ) &

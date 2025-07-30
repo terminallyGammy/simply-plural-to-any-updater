@@ -42,9 +42,9 @@ const VRC_ENV_PATH_STR: &str = "vrcupdater.env";
 pub async fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
     let client = Client::builder().cookie_store(true).build()?;
 
-    // This will run the VRChat updater specific setup if SERVE_API is not already 'true'.
+    // This will run the VRChat updater specific setup if not in webserver mode.
     // It might exit if it creates a sample .env file for the user to edit.
-    initialize_environment_for_updater(&client).await?;
+    initialize_environment_for_updater(&client, &cli_args).await?;
 
     eprintln!("Loading environment variables...");
     let system_name = if cli_args.webserver {
@@ -96,15 +96,10 @@ pub async fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
     })
 }
 
-/// Sets up environment variables based on remote and local files for `VRChat` updater mode.
-pub async fn initialize_environment_for_updater(client: &Client) -> Result<()> {
-    // Only run this setup if SERVE_API is not explicitly true from the environment already
-    let serve_api = str::eq(
-        &var("SERVE_API").unwrap_or_else(|_| "false".to_owned()),
-        "true",
-    );
-    if serve_api {
-        eprintln!("SERVE_API is true, skipping VRChat updater specific environment setup.");
+/// Sets up environment variables based on remote and local files for VRChat updater mode.
+pub async fn initialize_environment_for_updater(client: &Client, cli_args: &CliArgs) -> Result<()> {
+    if cli_args.webserver {
+        eprintln!("In webserver mode: Skipping VRChat updater specific environment setup.");
         return Ok(());
     }
     eprintln!("Running VRChat updater specific environment setup...");

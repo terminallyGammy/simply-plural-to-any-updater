@@ -1,17 +1,15 @@
-
 use anyhow::{anyhow, Result};
 use tauri::{self, tray::TrayIcon};
 
 use crate::{config::Config, vrchat};
 
 pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
-
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         .setup(move |app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 
-            tauri::async_runtime::spawn(async move { vrchat::run_updater_loop(&config).await.unwrap() });
+            tauri::async_runtime::spawn(async move { vrchat::run_updater_loop(&config).await });
 
             tauri_system_tray_handler(app)?;
 
@@ -20,7 +18,6 @@ pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
         .run(tauri::generate_context!())
         .map_err(|e| anyhow!(e))
 }
-
 
 fn tauri_system_tray_handler(app: &mut tauri::App) -> Result<TrayIcon> {
     let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -34,9 +31,9 @@ fn tauri_system_tray_handler(app: &mut tauri::App) -> Result<TrayIcon> {
             "quit" => {
                 eprintln!("tauri: menu event quit.");
                 app.exit(0);
-            },
+            }
             unknown => {
-                eprintln!("tauri: menu event {} unknown.", unknown)
+                eprintln!("tauri: menu event {unknown} unknown.");
             }
         })
         .build(app)

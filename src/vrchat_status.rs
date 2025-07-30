@@ -4,15 +4,12 @@ use encoding_rs::ISO_8859_15;
 
 const VRCHAT_MAX_ALLOWED_STATUS_LENGTH: usize = 23;
 
-pub(crate) fn format_fronts_for_vrchat_status(
+pub fn format_fronts_for_vrchat_status(
     config: &Config,
     fronts: Vec<simply_plural::MemberContent>,
 ) -> String {
     let cleaned_fronter_names = clean_fronter_names(fronts, &config.vrchat_updater_no_fronts);
-    eprintln!(
-        "Cleaned fronter names for status: {:?}",
-        cleaned_fronter_names
-    );
+    eprintln!("Cleaned fronter names for status: {cleaned_fronter_names:?}");
 
     let status_strings =
         compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_tradeoff(
@@ -60,7 +57,7 @@ fn compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_t
             .map(|&name| {
                 let mut truncated_name = String::new();
 
-                let _ = &name
+                let () = &name
                     .chars()
                     .take(config.vrchat_updater_truncate_names_to)
                     .for_each(|c| truncated_name.push(c));
@@ -95,11 +92,12 @@ fn compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_t
 }
 
 fn pick_longest_string_within_vrchat_status_length_limit(status_strings: Vec<String>) -> String {
+    let empty_string = String::from("");
     status_strings
         .iter()
         .filter(|s| s.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH)
         .max_by_key(|s| s.len())
-        .unwrap()
+        .unwrap_or_else(|| &empty_string) // can't happen due to compile time guarantee
         .to_string()
 }
 
@@ -116,7 +114,7 @@ fn clean_name_for_vrchat_status(dirty_name: &str) -> String {
         // convert utf-8 str to the limited encoding and check if the character is supported.
         let mut char_cleaned_buffer = [0u8; 20];
         let (_, _, _, is_unsupported_character) = ISO_8859_15.new_encoder().encode_from_utf8(
-            &ch_string.as_str(),
+            ch_string.as_str(),
             &mut char_cleaned_buffer,
             true,
         );
@@ -156,7 +154,7 @@ mod tests {
         let info_as_json = if vrchat_status_name.is_empty() {
             "{}".to_string()
         } else {
-            format!("{{\"0\":\"{}\"}}", vrchat_status_name)
+            format!("{{\"0\":\"{vrchat_status_name}\"}}")
         };
         MemberContent {
             name: name.to_string(),

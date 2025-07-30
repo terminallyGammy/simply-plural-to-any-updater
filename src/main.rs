@@ -4,41 +4,40 @@
 #[macro_use]
 extern crate rocket;
 
-use std::future::Future;
-use config::setup_and_load_config;
-use tokio::runtime;
+use anyhow::Result;
 use clap::{self, Parser};
+use config::setup_and_load_config;
+use std::future::Future;
+use tokio::runtime;
 
 mod config;
+mod gui;
 mod simply_plural;
 mod vrchat;
 mod vrchat_auth;
 mod vrchat_status;
 mod webserver;
-mod gui;
 
-fn main() {
+fn main() -> Result<()> {
     let cli_args = config::CliArgs::parse();
 
-    let config = run_async_blocking(setup_and_load_config(&cli_args)).unwrap();
+    let config = run_async_blocking(setup_and_load_config(&cli_args))?;
 
     if cli_args.webserver {
         eprintln!("Running in Webserver mode ...");
-        run_async_blocking(webserver::run_server(config.clone())).unwrap();
-        return;
-    }
-
-    if cli_args.no_gui {
+        run_async_blocking(webserver::run_server(config))?;
+    } else if cli_args.no_gui {
         eprintln!("Running SP2Any Updater in console mode ...");
-        run_async_blocking(vrchat::run_updater_loop(&config)).unwrap();
+        run_async_blocking(vrchat::run_updater_loop(&config))?;
     } else {
         eprintln!("Starting SP2Any Updater in GUI mode ...");
-        gui::run_tauri_gui(config.clone()).unwrap()
+        gui::run_tauri_gui(config)?;
     }
+
+    Ok(())
 }
 
-fn run_async_blocking<T>(f: impl Future<Output = T>) -> T {
-    runtime::Runtime::new()
-        .unwrap()
-        .block_on(f)
+fn run_async_blocking<T>(f: impl Future<Output = Result<T>>) -> Result<T> {
+    let rt = runtime::Runtime::new()?;
+    rt.block_on(f)
 }

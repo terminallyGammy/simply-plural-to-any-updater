@@ -22,7 +22,7 @@ async fn rest_get_fronting(
 ) -> Result<RawHtml<String>, response::Debug<anyhow::Error>> {
     let fronts = simply_plural::fetch_fronts(config.inner())
         .await
-        .map_err(|e| response::Debug(e))?; // Convert anyhow::Error to response::Debug
+        .map_err(response::Debug)?; // Convert anyhow::Error to response::Debug
     let html = generate_html(config.inner(), fronts);
     Ok(RawHtml(html))
 }
@@ -41,7 +41,7 @@ fn generate_html(config: &Config, fronts: Vec<simply_plural::MemberContent>) -> 
         .join("\n");
 
     format!(
-        r#"<html>
+        r"<html>
     <head>
         <title>{} - Fronting Status</title>
         <style>
@@ -95,7 +95,7 @@ fn generate_html(config: &Config, fronts: Vec<simply_plural::MemberContent>) -> 
     <body>
         {}
     </body>
-</html>"#,
+</html>",
         html_escape::encode_text(&config.system_name),
         fronts_formatted
     )

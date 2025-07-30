@@ -1,10 +1,9 @@
 use anyhow::Result;
 use serde::Deserialize;
-use serde_json;
 
 use crate::config::Config;
 
-pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
+pub async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
     let front_entries = simply_plural_http_request_get_fronters(config).await?;
 
     if front_entries.is_empty() {
@@ -18,21 +17,21 @@ pub(crate) async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> 
     let vrcsn_field_id = get_vrchat_status_name_field_id(config, system_id).await?;
 
     let fronts_with_vrchat_custom_field =
-        enrich_fronters_with_vrchat_status_field(fronts, vrcsn_field_id);
+        enrich_fronters_with_vrchat_status_field(&fronts, &vrcsn_field_id);
 
     Ok(fronts_with_vrchat_custom_field)
 }
 
 fn enrich_fronters_with_vrchat_status_field(
-    fronts: Vec<MemberContent>,
-    vrcsn_field_id: Option<String>,
+    fronts: &Vec<MemberContent>,
+    vrcsn_field_id: &Option<String>,
 ) -> Vec<MemberContent> {
     fronts
         .iter()
         .map(|m| {
             let mut enriched_member = m.clone();
-            enriched_member.vrcsn_field_id = vrcsn_field_id.clone();
-            println!("Fronting member: {:?}", enriched_member);
+            enriched_member.vrcsn_field_id.clone_from(vrcsn_field_id);
+            println!("Fronting member: {enriched_member:?}");
             enriched_member
         })
         .collect()
@@ -56,7 +55,7 @@ async fn enrich_fronter_ids_with_member_info(
         .map(|m| m.content)
         .collect();
 
-    return Ok(enriched_fronting_members);
+    Ok(enriched_fronting_members)
 }
 
 async fn simply_plural_http_request_get_fronters(config: &Config) -> Result<Vec<FrontEntry>> {
@@ -164,11 +163,9 @@ impl MemberContent {
             Some(field_id) => self
                 .info
                 .as_object()
-                .map(|custom_fields| custom_fields.get(field_id))
-                .flatten()
-                .map(|value| value.as_str())
-                .flatten()
-                .map(|s| s.to_string())
+                .and_then(|custom_fields| custom_fields.get(field_id))
+                .and_then(|value| value.as_str())
+                .map(std::string::ToString::to_string)
                 .unwrap_or(self.name.clone()),
         }
     }

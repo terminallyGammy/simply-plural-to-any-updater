@@ -3,6 +3,8 @@
 set -euo pipefail
 
 echo "Run:"
-rm -f vrcupdater.env || true
-cp dev/sp2any.env vrcupdater.env
+
+echo "TODO: set config values json!"
+exit 1
+
 ./dev/tauri-dev.sh

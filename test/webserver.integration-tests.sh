@@ -6,6 +6,7 @@ set -euo pipefail
 
 [[ "$SPS_API_WRITE_TOKEN" != "" ]]
 
+source ./test/source.sh
 source ./test/plural_system_to_test.sh
 
 main() {
@@ -53,11 +54,11 @@ check_system_fronts_set() {
 WEBSERVER_FRONTING_URL="http://0.0.0.0:8000/fronting"
 
 start_webserver() {
-    set -a; source defaults.env; set +a
-    export SPS_API_TOKEN
+    set -a; source release/config/server.defaults.env; set +a
     export SYSTEM_PUBLIC_NAME="SP-Updater-Test"
+    write_env_vars_to_config_json
 
-    (./target/release/sps_status --webserver 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
+    (./target/release/sps_status --webserver --config "$CONFIG_FILE" 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
 
     sleep 1s
 

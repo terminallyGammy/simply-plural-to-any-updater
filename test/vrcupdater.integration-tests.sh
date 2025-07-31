@@ -12,9 +12,8 @@ set -euo pipefail
 
 [[ "$VRCHAT_COOKIE" != "" ]]
 
+source ./test/source.sh
 source ./test/plural_system_to_test.sh
-
-SECONDS_BETWEEN_UPDATES=10
 
 main() {
     stop_vrc_updater
@@ -95,17 +94,9 @@ check_updater_failure_and_loop_continues() {
 
 
 start_vrc_updater() {
-    rm -rf vrcupdater.env || true
+    write_env_vars_to_config_json
 
-    echo "
-SPS_API_TOKEN=\"$SPS_API_TOKEN\"
-VRCHAT_USERNAME=\"$VRCHAT_USERNAME\"
-VRCHAT_PASSWORD=\"$VRCHAT_PASSWORD\"
-VRCHAT_COOKIE=\"$VRCHAT_COOKIE\"
-SECONDS_BETWEEN_UPDATES=\"$SECONDS_BETWEEN_UPDATES\"
-    " >> vrcupdater.env
-
-    (./target/release/sps_status --no-gui 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
+    (./target/release/sps_status --no-gui --config "$CONFIG_FILE" 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
 
     sleep 5s
 

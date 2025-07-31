@@ -1,4 +1,7 @@
-use crate::config::{self, Config};
+use crate::{
+    config::Config,
+    config_store::{self},
+};
 use anyhow::{anyhow, Error, Result};
 use reqwest::{
     cookie::{self, CookieStore},
@@ -33,7 +36,7 @@ pub async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, Stri
     let new_cookie_received = authenticate_vrchat_user(config, &vrchat_config).await?;
 
     if new_cookie_received {
-        store_new_cookie(&cookie_store).await?;
+        store_new_cookie(config, &cookie_store).await?;
     }
 
     let user_id = get_vrchat_user_id(config, &vrchat_config).await?;
@@ -104,12 +107,12 @@ async fn authenticate_vrchat_user(
     Ok(new_cookie_recieved_due_to_2fa)
 }
 
-async fn store_new_cookie(cookie_store: &Arc<cookie::Jar>) -> Result<()> {
+async fn store_new_cookie(config: &Config, cookie_store: &Arc<cookie::Jar>) -> Result<()> {
     let cookie_url = &Url::from_str(VRCHAT_COOKIE_URL)?;
     let cookie_value = cookie_store
         .cookies(cookie_url)
         .ok_or(Error::msg("no cookies"))?;
-    config::store_vrchat_cookie(cookie_value.to_str()?).await
+    config_store::store_vrchat_cookie(cookie_value.to_str()?, &config.cli_args)
 }
 
 async fn get_vrchat_user_id(config: &Config, vrchat_config: &Configuration) -> Result<String> {

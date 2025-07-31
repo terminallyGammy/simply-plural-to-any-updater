@@ -67,11 +67,21 @@ as well as `VRCHAT_USERNAME`, `VRCHAT_PASSWORD` and `VRCHAT_COOKIE` of the VRC t
 
 To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
 
+Use `--config <filepath>` to specify an alternate directory where the config is stored and retrieved from.
+
 ### Current Migration
 
 Migrate from directory local .env files to storing a .json in the home directoy.
 That can be manually edited as well as configured via the GUI.
 
 * default behavior for default configuration remains same
+  * config JSON file is created, if none exists
+  * only the values, which the user explicitly set are written into the config file
+  * all other values are fetched from online from the github.com defaults
 * GUI fetches and displays values from JSON
 * don't offer a way to migrate from old .env file. keep code simple there.
+* update README.md
+
+### TODO
+
+* make ./release/lint.sh into CI. also add check that generated config example.json is equal to comitted one.

@@ -7,7 +7,9 @@ echo "Build..."
 echo "Done."
 
 echo "Run:"
-rm -f vrcupdater.env || true
-cp dev/vrcupdater.env vrcupdater.env # uncomment this line to test absence of env file
+
+echo "TODO: set config values json!"
+exit 1
+
 ./target/release/sps_status --no-gui
 

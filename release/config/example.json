@@ -1,0 +1,15 @@
+{
+  "wait_seconds": {
+    "secs": 60,
+    "nanos": 0
+  },
+  "system_name": "Our System",
+  "simply_plural_token": "simply plural token",
+  "simply_plural_base_url": "https://api.apparyllis.com/v1",
+  "vrchat_username": "vrchat username",
+  "vrchat_password": "vrchat password",
+  "vrchat_updater_prefix": "F:",
+  "vrchat_updater_no_fronts": "none?",
+  "vrchat_updater_truncate_names_to": 3,
+  "vrchat_cookie": "automatically set when using vrchat"
+}

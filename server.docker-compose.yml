@@ -6,7 +6,7 @@ services:
     image: "sps-status:latest"
     container_name: sps-status
     env_file:
-      - defaults.env
+      - release/config/server.defaults.env
       - server.env
     restart: "on-failure:2"
     networks:

@@ -57,7 +57,9 @@ clear_all_fronts() {
     fi
 
     while read fronter_id; do
+        
         echo "Clearing front (id=$fronter_id)"
+        
         curl --silent -L -X PATCH "https://api.apparyllis.com/v1/frontHistory/$fronter_id" \
             -H 'Content-Type: application/json' \
             -H "Authorization: $SPS_API_WRITE_TOKEN" \
@@ -68,11 +70,12 @@ clear_all_fronts() {
                 "customStatus": "",
                 "custom": false
             }'
-    done <<< "$FRONTER_IDS"
+        
+        rate_limiting_delay
 
-    rate_limiting_delay
+    done <<< "$FRONTER_IDS"
 }
 
 rate_limiting_delay() {
-    sleep 1s
+    sleep 0.5s
 }

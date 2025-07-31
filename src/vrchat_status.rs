@@ -92,12 +92,12 @@ fn compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_t
 }
 
 fn pick_longest_string_within_vrchat_status_length_limit(status_strings: Vec<String>) -> String {
-    let empty_string = String::from("");
+    let empty_string = String::new();
     status_strings
         .iter()
         .filter(|s| s.len() <= VRCHAT_MAX_ALLOWED_STATUS_LENGTH)
         .max_by_key(|s| s.len())
-        .unwrap_or_else(|| &empty_string) // can't happen due to compile time guarantee
+        .unwrap_or(&empty_string) // can't happen due to compile time guarantee
         .to_string()
 }
 

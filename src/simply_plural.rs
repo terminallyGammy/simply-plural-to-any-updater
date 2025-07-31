@@ -157,7 +157,7 @@ pub struct MemberContent {
 }
 
 impl MemberContent {
-    pub(crate) fn preferred_vrchat_status_name(&self) -> String {
+    pub fn preferred_vrchat_status_name(&self) -> String {
         match &self.vrcsn_field_id {
             None => self.name.clone(),
             Some(field_id) => self

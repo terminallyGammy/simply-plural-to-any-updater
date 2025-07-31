@@ -3,7 +3,7 @@ target
 
 # Env files
 *.env
-!defaults*.env
+!*defaults*.env
 !vrcupdater.sample.env
 
 # Log files

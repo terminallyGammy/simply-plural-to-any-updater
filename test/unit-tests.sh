@@ -4,4 +4,3 @@ set -euo pipefail
 
 # unit tests
 cargo test
-

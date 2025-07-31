@@ -11,6 +11,7 @@ use std::future::Future;
 use tokio::runtime;
 
 mod config;
+mod config_store;
 mod gui;
 mod simply_plural;
 mod vrchat;
@@ -19,7 +20,7 @@ mod vrchat_status;
 mod webserver;
 
 fn main() -> Result<()> {
-    let cli_args = config::CliArgs::parse();
+    let cli_args = config_store::CliArgs::parse();
 
     let config = run_async_blocking(setup_and_load_config(&cli_args))?;
 

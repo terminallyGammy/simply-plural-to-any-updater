@@ -1,27 +1,14 @@
-use anyhow::Result;
-use clap::{self, Parser};
+use anyhow::{anyhow, Error, Result};
 use reqwest::Client;
-use std::env::{self, var};
-use std::path::Path;
-use std::process;
-use std::{fs, time};
+use std::time;
 use time::Duration;
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-pub struct CliArgs {
-    /// Run without the graphical user interface
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
-    pub no_gui: bool,
-
-    // Run in webserver mode. Implies no_gui.
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
-    pub webserver: bool,
-}
+use crate::config_store::{self, CliArgs, LocalConfigV2Field, LocalJsonConfigV2};
 
 #[derive(Debug, Clone, Default)]
 pub struct Config {
     pub client: Client,
+    // Note: Keep this in sync with config_store::LocalJsonConfigV2 !
     pub wait_seconds: Duration,
     pub system_name: String,
     pub simply_plural_token: String,
@@ -32,54 +19,63 @@ pub struct Config {
     pub vrchat_updater_no_fronts: String,
     pub vrchat_updater_truncate_names_to: usize,
     pub vrchat_cookie: String,
+    pub cli_args: CliArgs,
 }
-
-const DEFAULTS_ENV_URL: &str =
-    "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/defaults.v2.env";
-const VRCUPDATER_SAMPLE_ENV_URL: &str = "https://raw.githubusercontent.com/GollyTicker/simply-plural-to-any-updater/main/vrcupdater.sample.env";
-const VRC_ENV_PATH_STR: &str = "vrcupdater.env";
 
 pub async fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
     let client = Client::builder().cookie_store(true).build()?;
 
-    // This will run the VRChat updater specific setup if not in webserver mode.
-    // It might exit if it creates a sample .env file for the user to edit.
-    initialize_environment_for_updater(&client, &cli_args).await?;
+    eprintln!("Loading config ...");
 
-    eprintln!("Loading environment variables...");
+    // This will run the VRChat updater specific setup if not in webserver mode.
+    initialize_environment_for_updater(cli_args).await?;
+
+    let local_config_with_defaults = config_store::read_local_config_file(cli_args)?
+        .with_defaults_from(config_store::default_config());
+
     let system_name = if cli_args.webserver {
-        var("SYSTEM_PUBLIC_NAME")?
+        local_config_with_defaults.get_string_field(LocalConfigV2Field::SystemName)?
     } else {
         String::new()
     };
-    let wait_seconds_uint = var("SECONDS_BETWEEN_UPDATES")?.parse::<u64>()?;
-    let wait_seconds = Duration::from_secs(wait_seconds_uint);
+    let wait_seconds = local_config_with_defaults
+        .wait_seconds
+        .ok_or(field_err(LocalConfigV2Field::WaitSeconds))?;
 
-    let simply_plural_token = var("SPS_API_TOKEN")?;
-    let simply_plural_base_url = var("SPS_API_BASE_URL")?;
+    let simply_plural_token =
+        local_config_with_defaults.get_string_field(LocalConfigV2Field::SimplyPluralToken)?;
+    let simply_plural_base_url =
+        local_config_with_defaults.get_string_field(LocalConfigV2Field::SimplyPluralBaseUrl)?;
     eprintln!("Using Simply Plural Base URL: {simply_plural_base_url}");
 
-    let optional_vrchat_config = if cli_args.webserver {
-        Ok(String::new())
-    } else {
-        Err("VRChat variables needs configuration.")
-    };
+    let needs_vrchat_config = !cli_args.webserver;
 
-    let vrchat_username = optional_vrchat_config
-        .clone()
-        .or_else(|_| var("VRCHAT_USERNAME"))?;
-    let vrchat_password = optional_vrchat_config
-        .clone()
-        .or_else(|_| var("VRCHAT_PASSWORD"))?;
-    eprintln!("Credentials loaded. VRCHAT_USERNAME is {vrchat_username}");
-    let vrchat_cookie = var("VRCHAT_COOKIE").unwrap_or_default();
+    let vrchat_username = if needs_vrchat_config {
+        local_config_with_defaults.get_string_field(LocalConfigV2Field::VrchatUsername)?
+    } else {
+        String::new()
+    };
+    let vrchat_password = if needs_vrchat_config {
+        local_config_with_defaults.get_string_field(LocalConfigV2Field::VrchatPassword)?
+    } else {
+        String::new()
+    };
+    eprintln!("Credentials loaded. VRChat Username is '{vrchat_username}'");
+
+    let vrchat_cookie = local_config_with_defaults
+        .get_string_field(LocalConfigV2Field::VrchatCookie)
+        .unwrap_or_default();
     if !vrchat_cookie.is_empty() {
         eprintln!("A VRChat cookie was found and will be used.");
     }
-    let vrchat_updater_prefix = var("VRCHAT_UPDATER_PREFIX")?;
-    let vrchat_updater_no_fronts = var("VRCHAT_UPDATER_NO_FRONTS")?;
-    let vrchat_updater_truncate_names_to =
-        var("VRCHAT_UPDATER_TRUNCATE_NAMES_TO")?.parse::<usize>()?;
+
+    let vrchat_updater_prefix =
+        local_config_with_defaults.get_string_field(LocalConfigV2Field::VrchatUpdaterPrefix)?;
+    let vrchat_updater_no_fronts =
+        local_config_with_defaults.get_string_field(LocalConfigV2Field::VrchatUpdaterNoFronts)?;
+    let vrchat_updater_truncate_names_to = local_config_with_defaults
+        .vrchat_updater_truncate_names_to
+        .ok_or(field_err(LocalConfigV2Field::VrchatUpdaterTruncateNamesTo))?;
 
     Ok(Config {
         client,
@@ -93,104 +89,110 @@ pub async fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
         vrchat_updater_no_fronts,
         vrchat_updater_truncate_names_to,
         vrchat_cookie,
+        cli_args: cli_args.clone(),
     })
 }
 
-/// Sets up environment variables based on remote and local files for VRChat updater mode.
-pub async fn initialize_environment_for_updater(client: &Client, cli_args: &CliArgs) -> Result<()> {
+/// Sets up environment variables based on remote and local files for `VRChat` updater mode.
+pub async fn initialize_environment_for_updater(cli_args: &CliArgs) -> Result<()> {
     if cli_args.webserver {
         eprintln!("In webserver mode: Skipping VRChat updater specific environment setup.");
         return Ok(());
     }
     eprintln!("Running VRChat updater specific environment setup...");
 
-    load_remote_defaults_env(client).await?;
+    let _is_fresh_config = config_store::initialise_if_not_exists(cli_args).await?;
 
-    load_vrcupdater_env_or_create_for_user_and_exit(client).await?;
+    // todo. if fresh config, then ensure, that updater doesn't automatically start
+    // todo. we need a global state which indicates if the updater should be running or not.
 
     eprintln!("VRChat updater environment setup complete.");
     Ok(())
 }
 
-/// Loads default environment variables from the remote defaults.env file.
-/// This is part of the `VRChat` updater specific environment setup.
-async fn load_remote_defaults_env(client: &Client) -> Result<()> {
-    let defaults_env_content = download_file_content_for_setup(DEFAULTS_ENV_URL, client).await?;
-    load_env_vars_from_string(&defaults_env_content, "defaults.env (remote)");
-    Ok(())
-}
-
-/// Handles the local vrcupdater.env file for `VRChat` updater mode.
-/// If it exists, it's loaded. If not, it's created from a remote sample,
-/// and the program exits, prompting the user to configure it.
-async fn load_vrcupdater_env_or_create_for_user_and_exit(client: &Client) -> Result<()> {
-    let vrc_env_path = Path::new(VRC_ENV_PATH_STR);
-
-    if vrc_env_path.exists() {
-        let content = fs::read_to_string(vrc_env_path)?;
-        load_env_vars_from_string(&content, VRC_ENV_PATH_STR);
-        eprintln!("Using local {VRC_ENV_PATH_STR}...");
-    } else {
-        eprintln!("{VRC_ENV_PATH_STR} not found. Creating sample environment file...");
-        let sample_content =
-            download_file_content_for_setup(VRCUPDATER_SAMPLE_ENV_URL, client).await?;
-        fs::write(vrc_env_path, sample_content)?;
-        eprintln!(
-            "\n\n\n######### IMPORTANT #########\n\
-            Configuration file '{VRC_ENV_PATH_STR}' has been created.\n\
-            Please edit it with a simple text editor and\n\
-            enter the SimplyPlural and VRChat credentials.\n\
-            The file explains how to get these.\n\
-            Please, run the application again then."
-        );
-        process::exit(0); // Exit successfully for user to configure
-    }
-    Ok(())
-}
-
-// Helper function to parse a string containing KEY=VALUE pairs and set them as environment variables.
-fn load_env_vars_from_string(content: &str, source_name: &str) {
-    eprintln!("Loading environment variables from {source_name} ...");
-    for item in dotenvy::Iter::new(content.as_bytes()).filter_map(Result::ok) {
-        env::set_var(item.0.clone(), item.1.clone());
+// todo... we should find a different way to do this. marcos would be better here.
+impl LocalConfigV2Field {
+    fn display(&self) -> String {
+        match self {
+            Self::WaitSeconds => "Wait X seconds between each update (advanced)".to_string(),
+            Self::SystemName => "Name of your System".to_string(),
+            Self::SimplyPluralToken => "SimplyPlural Access Token".to_string(),
+            Self::SimplyPluralBaseUrl => "SimplyPlural Remote Base URL (advanced)".to_string(),
+            Self::VrchatUsername => "VRChat Username".to_string(),
+            Self::VrchatPassword => "VRChat Password".to_string(),
+            Self::VrchatCookie => "VRChat Cookie (advanced)".to_string(),
+            Self::VrchatUpdaterPrefix => "How the fronts status begins".to_string(),
+            Self::VrchatUpdaterNoFronts => "What to show when there are no fronts".to_string(),
+            Self::VrchatUpdaterTruncateNamesTo => {
+                "The number of characters to truncate each fronter name if the status were to be too long".to_string()
+            }
+        }
     }
 }
 
-// Function to store the VRChat Cookie into the .env file of configs.
-// If a line starting with VRC_COOKIE is defined in the file,
-// then we replace it with VRC_COOKIE="cookie_str".
-// Otherwise, we add such a line to the very end and save the file.
-pub async fn store_vrchat_cookie(cookie_str: &str) -> Result<()> {
-    let vrc_env_path = Path::new(VRC_ENV_PATH_STR);
-    let content = fs::read_to_string(vrc_env_path)?;
-    let new_cookie_line = format!("VRCHAT_COOKIE=\"{cookie_str}\"");
-    let cookie_key_prefix = "VRCHAT_COOKIE=";
-
-    let mut lines: Vec<String> = content.lines().map(String::from).collect();
-
-    if let Some(existing_line_idx) = lines
-        .iter()
-        .position(|line| line.trim_start().starts_with(cookie_key_prefix))
-    {
-        lines[existing_line_idx] = new_cookie_line;
-    } else {
-        lines.push(String::new());
-        lines.push("# DO NOT EDIT THE COOKIE BELOW!".to_string());
-        lines.push(new_cookie_line);
-        lines.push(String::new());
+impl LocalJsonConfigV2 {
+    // todo. could we perhaps make this into a macro?
+    fn get_string_field(&self, field: LocalConfigV2Field) -> Result<String> {
+        match field {
+            LocalConfigV2Field::SystemName => self.system_name.clone().ok_or(field_err(field)),
+            LocalConfigV2Field::SimplyPluralToken => {
+                self.simply_plural_token.clone().ok_or(field_err(field))
+            }
+            LocalConfigV2Field::SimplyPluralBaseUrl => {
+                self.simply_plural_base_url.clone().ok_or(field_err(field))
+            }
+            LocalConfigV2Field::VrchatUsername => {
+                self.vrchat_username.clone().ok_or(field_err(field))
+            }
+            LocalConfigV2Field::VrchatPassword => {
+                self.vrchat_password.clone().ok_or(field_err(field))
+            }
+            LocalConfigV2Field::VrchatCookie => self.vrchat_cookie.clone().ok_or(field_err(field)),
+            LocalConfigV2Field::VrchatUpdaterPrefix => {
+                self.vrchat_updater_prefix.clone().ok_or(field_err(field))
+            }
+            LocalConfigV2Field::VrchatUpdaterNoFronts => self
+                .vrchat_updater_no_fronts
+                .clone()
+                .ok_or(field_err(field)),
+            LocalConfigV2Field::WaitSeconds => unimplemented!(),
+            LocalConfigV2Field::VrchatUpdaterTruncateNamesTo => unimplemented!(),
+        }
     }
 
-    let new_content = lines.join("\n");
-    fs::write(vrc_env_path, new_content)?;
-
-    eprintln!("VRChat cookie stored in {VRC_ENV_PATH_STR}.");
-    Ok(())
+    fn with_defaults_from(&self, defaults: Self) -> Self {
+        Self {
+            wait_seconds: self.wait_seconds.or(defaults.wait_seconds),
+            system_name: self.system_name.clone().or(defaults.system_name),
+            simply_plural_token: self
+                .simply_plural_token
+                .clone()
+                .or(defaults.simply_plural_token),
+            simply_plural_base_url: self
+                .simply_plural_base_url
+                .clone()
+                .or(defaults.simply_plural_base_url),
+            vrchat_username: self.vrchat_username.clone().or(defaults.vrchat_username),
+            vrchat_password: self.vrchat_password.clone().or(defaults.vrchat_password),
+            vrchat_updater_prefix: self
+                .vrchat_updater_prefix
+                .clone()
+                .or(defaults.vrchat_updater_prefix),
+            vrchat_updater_no_fronts: self
+                .vrchat_updater_no_fronts
+                .clone()
+                .or(defaults.vrchat_updater_no_fronts),
+            vrchat_updater_truncate_names_to: self
+                .vrchat_updater_truncate_names_to
+                .or(defaults.vrchat_updater_truncate_names_to),
+            vrchat_cookie: self.vrchat_cookie.clone().or(defaults.vrchat_cookie),
+        }
+    }
 }
 
-// Helper function to download file content specifically for setup
-async fn download_file_content_for_setup(url: &str, client: &reqwest::Client) -> Result<String> {
-    let response = client.get(url).send().await?.error_for_status()?;
-    let content = response.text().await?;
-    eprintln!("Downloaded for setup: {url}");
-    Ok(content)
+fn field_err(config_field: LocalConfigV2Field) -> Error {
+    anyhow!(format!(
+        "Mandatory field undefined or invalid: '{}'",
+        config_field.display()
+    ))
 }

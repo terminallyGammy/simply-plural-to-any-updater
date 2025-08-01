@@ -22,60 +22,62 @@ pub struct Config {
     pub cli_args: CliArgs,
 }
 
-pub async fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
+pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
     let client = Client::builder().cookie_store(true).build()?;
 
     eprintln!("Loading config ...");
 
     // This will run the VRChat updater specific setup if not in webserver mode.
-    initialize_environment_for_updater(cli_args).await?;
+    initialize_environment_for_updater(cli_args)?;
 
     let local_config_with_defaults = config_store::read_local_config_file(cli_args)?
         .with_defaults_from(config_store::default_config());
 
     let system_name = if cli_args.webserver {
-        local_config_with_defaults.get_string_field(LocalConfigV2Field::SystemName)?
+        local_config_with_defaults.get_string_field(&LocalConfigV2Field::SystemName)?
     } else {
         String::new()
     };
+    #[allow(clippy::or_fun_call)]
     let wait_seconds = local_config_with_defaults
         .wait_seconds
-        .ok_or(field_err(LocalConfigV2Field::WaitSeconds))?;
+        .ok_or(field_err(&LocalConfigV2Field::WaitSeconds))?;
 
     let simply_plural_token =
-        local_config_with_defaults.get_string_field(LocalConfigV2Field::SimplyPluralToken)?;
+        local_config_with_defaults.get_string_field(&LocalConfigV2Field::SimplyPluralToken)?;
     let simply_plural_base_url =
-        local_config_with_defaults.get_string_field(LocalConfigV2Field::SimplyPluralBaseUrl)?;
+        local_config_with_defaults.get_string_field(&LocalConfigV2Field::SimplyPluralBaseUrl)?;
     eprintln!("Using Simply Plural Base URL: {simply_plural_base_url}");
 
     let needs_vrchat_config = !cli_args.webserver;
 
     let vrchat_username = if needs_vrchat_config {
-        local_config_with_defaults.get_string_field(LocalConfigV2Field::VrchatUsername)?
+        local_config_with_defaults.get_string_field(&LocalConfigV2Field::VrchatUsername)?
     } else {
         String::new()
     };
     let vrchat_password = if needs_vrchat_config {
-        local_config_with_defaults.get_string_field(LocalConfigV2Field::VrchatPassword)?
+        local_config_with_defaults.get_string_field(&LocalConfigV2Field::VrchatPassword)?
     } else {
         String::new()
     };
     eprintln!("Credentials loaded. VRChat Username is '{vrchat_username}'");
 
     let vrchat_cookie = local_config_with_defaults
-        .get_string_field(LocalConfigV2Field::VrchatCookie)
+        .get_string_field(&LocalConfigV2Field::VrchatCookie)
         .unwrap_or_default();
     if !vrchat_cookie.is_empty() {
         eprintln!("A VRChat cookie was found and will be used.");
     }
 
     let vrchat_updater_prefix =
-        local_config_with_defaults.get_string_field(LocalConfigV2Field::VrchatUpdaterPrefix)?;
+        local_config_with_defaults.get_string_field(&LocalConfigV2Field::VrchatUpdaterPrefix)?;
     let vrchat_updater_no_fronts =
-        local_config_with_defaults.get_string_field(LocalConfigV2Field::VrchatUpdaterNoFronts)?;
+        local_config_with_defaults.get_string_field(&LocalConfigV2Field::VrchatUpdaterNoFronts)?;
+    #[allow(clippy::or_fun_call)]
     let vrchat_updater_truncate_names_to = local_config_with_defaults
         .vrchat_updater_truncate_names_to
-        .ok_or(field_err(LocalConfigV2Field::VrchatUpdaterTruncateNamesTo))?;
+        .ok_or(field_err(&LocalConfigV2Field::VrchatUpdaterTruncateNamesTo))?;
 
     Ok(Config {
         client,
@@ -94,14 +96,14 @@ pub async fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
 }
 
 /// Sets up environment variables based on remote and local files for `VRChat` updater mode.
-pub async fn initialize_environment_for_updater(cli_args: &CliArgs) -> Result<()> {
+pub fn initialize_environment_for_updater(cli_args: &CliArgs) -> Result<()> {
     if cli_args.webserver {
         eprintln!("In webserver mode: Skipping VRChat updater specific environment setup.");
         return Ok(());
     }
     eprintln!("Running VRChat updater specific environment setup...");
 
-    let _is_fresh_config = config_store::initialise_if_not_exists(cli_args).await?;
+    let _is_fresh_config = config_store::initialise_if_not_exists(cli_args)?;
 
     // todo. if fresh config, then ensure, that updater doesn't automatically start
     // todo. we need a global state which indicates if the updater should be running or not.
@@ -132,7 +134,8 @@ impl LocalConfigV2Field {
 
 impl LocalJsonConfigV2 {
     // todo. could we perhaps make this into a macro?
-    fn get_string_field(&self, field: LocalConfigV2Field) -> Result<String> {
+    #[allow(clippy::or_fun_call)]
+    fn get_string_field(&self, field: &LocalConfigV2Field) -> Result<String> {
         match field {
             LocalConfigV2Field::SystemName => self.system_name.clone().ok_or(field_err(field)),
             LocalConfigV2Field::SimplyPluralToken => {
@@ -190,7 +193,7 @@ impl LocalJsonConfigV2 {
     }
 }
 
-fn field_err(config_field: LocalConfigV2Field) -> Error {
+fn field_err(config_field: &LocalConfigV2Field) -> Error {
     anyhow!(format!(
         "Mandatory field undefined or invalid: '{}'",
         config_field.display()

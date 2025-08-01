@@ -63,8 +63,9 @@ pub enum LocalConfigV2Field {
 
 fn local_json_config_file_path(operation: &str, cli_args: &CliArgs) -> Result<String> {
     let file_path = if cli_args.config.clone().is_empty() {
-        ProjectDirs::from("org", "sp2any", "sp2any")
-            .unwrap()
+        #[allow(clippy::unwrap_used)]
+        let project_dir = ProjectDirs::from("org", "sp2any", "sp2any").unwrap();
+        project_dir
             .config_dir()
             .to_str()
             .map(String::from)
@@ -99,7 +100,7 @@ fn write_local_config_file(local_config: &LocalJsonConfigV2, cli_args: &CliArgs)
 }
 
 /// The bool is true, if a new config was created.
-pub async fn initialise_if_not_exists(cli_args: &CliArgs) -> Result<bool> {
+pub fn initialise_if_not_exists(cli_args: &CliArgs) -> Result<bool> {
     let fresh_config = !check_local_config_file_exists(cli_args)?;
     if fresh_config {
         write_local_config_file(&LocalJsonConfigV2::default(), cli_args)?;

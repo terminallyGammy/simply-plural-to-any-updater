@@ -18,6 +18,7 @@ pub async fn run_updater_loop(config: &Config) -> Result<()> {
             Utc::now().format("%Y-%m-%d %H:%M:%S")
         );
 
+        #[allow(clippy::or_fun_call)]
         updater_loop_logic(config, &vrchat_config, &user_id)
             .await
             .inspect_err(|err| {
@@ -37,22 +38,22 @@ pub async fn run_updater_loop(config: &Config) -> Result<()> {
 async fn updater_loop_logic(
     config: &Config,
     vrchat_config: &Configuration,
-    user_id: &String,
+    user_id: &str,
 ) -> Result<()> {
     let fronts = simply_plural::fetch_fronts(config).await?;
 
-    let status_string = vrchat_status::format_fronts_for_vrchat_status(config, fronts);
+    let status_string = vrchat_status::format_fronts_for_vrchat_status(config, &fronts);
 
-    set_vrchat_status(vrchat_config, user_id, status_string).await
+    set_vrchat_status(vrchat_config, user_id, status_string.as_str()).await
 }
 
 async fn set_vrchat_status(
     vrchat_config: &Configuration,
-    user_id: &String,
-    status_string: String,
+    user_id: &str,
+    status_string: &str,
 ) -> Result<()> {
     let mut update_request = UpdateUserRequest::new();
-    update_request.status_description = Some(status_string.clone());
+    update_request.status_description = Some(status_string.to_string());
 
     users_api::update_user(vrchat_config, user_id, Some(update_request))
         .await

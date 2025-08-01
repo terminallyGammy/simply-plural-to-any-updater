@@ -6,7 +6,7 @@ use crate::{config::Config, vrchat};
 pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
-        .setup(move |app| {
+        .setup(|app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 
             tauri::async_runtime::spawn(async move { vrchat::run_updater_loop(&config).await });
@@ -19,12 +19,16 @@ pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
         .map_err(|e| anyhow!(e))
 }
 
-fn tauri_system_tray_handler(app: &mut tauri::App) -> Result<TrayIcon> {
+fn tauri_system_tray_handler(app: &tauri::App) -> Result<TrayIcon> {
     let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = tauri::menu::Menu::with_items(app, &[&quit_i])?;
 
     tauri::tray::TrayIconBuilder::new()
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(
+            app.default_window_icon()
+                .ok_or_else(|| anyhow!("No icon found."))?
+                .clone(),
+        )
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id().as_ref() {

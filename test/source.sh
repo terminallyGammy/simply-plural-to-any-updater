@@ -14,6 +14,4 @@ write_env_vars_to_config_json() {
         \"system_name\": \"${SYSTEM_PUBLIC_NAME-null}\",
         \"wait_seconds\": { \"secs\": ${SECONDS_BETWEEN_UPDATES}, \"nanos\": 0 }
     }" > "$CONFIG_FILE"
-
-    cat "$CONFIG_FILE"
 }

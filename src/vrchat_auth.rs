@@ -36,7 +36,7 @@ pub async fn authenticate_vrchat(config: &Config) -> Result<(Configuration, Stri
     let new_cookie_received = authenticate_vrchat_user(config, &vrchat_config).await?;
 
     if new_cookie_received {
-        store_new_cookie(config, &cookie_store).await?;
+        store_new_cookie(config, &cookie_store)?;
     }
 
     let user_id = get_vrchat_user_id(config, &vrchat_config).await?;
@@ -48,21 +48,21 @@ fn new_vrchat_config_with_basic_auth_and_optional_cookie(
     config: &Config,
     cookie_store: &Arc<cookie::Jar>,
 ) -> Result<Configuration> {
-    let mut vrchat_config = Configuration::default();
-
-    vrchat_config.user_agent = Some(VRCHAT_UPDATER_USER_AGENT.to_string());
-    vrchat_config.basic_auth = Some((
-        config.vrchat_username.clone(),
-        Some(config.vrchat_password.clone()),
-    ));
-
     let cookie_url = &Url::from_str(VRCHAT_COOKIE_URL)?;
 
     cookie_store.add_cookie_str(&config.vrchat_cookie, cookie_url);
 
-    vrchat_config.client = reqwest::Client::builder()
-        .cookie_provider(cookie_store.clone())
-        .build()?;
+    let vrchat_config = Configuration {
+        user_agent: Some(VRCHAT_UPDATER_USER_AGENT.to_string()),
+        basic_auth: Some((
+            config.vrchat_username.clone(),
+            Some(config.vrchat_password.clone()),
+        )),
+        client: reqwest::Client::builder()
+            .cookie_provider(cookie_store.clone())
+            .build()?,
+        ..Default::default()
+    };
 
     Ok(vrchat_config)
 }
@@ -107,11 +107,11 @@ async fn authenticate_vrchat_user(
     Ok(new_cookie_recieved_due_to_2fa)
 }
 
-async fn store_new_cookie(config: &Config, cookie_store: &Arc<cookie::Jar>) -> Result<()> {
+fn store_new_cookie(config: &Config, cookie_store: &Arc<cookie::Jar>) -> Result<()> {
     let cookie_url = &Url::from_str(VRCHAT_COOKIE_URL)?;
     let cookie_value = cookie_store
         .cookies(cookie_url)
-        .ok_or(Error::msg("no cookies"))?;
+        .ok_or_else(|| Error::msg("no cookies"))?;
     config_store::store_vrchat_cookie(cookie_value.to_str()?, &config.cli_args)
 }
 

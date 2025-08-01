@@ -6,7 +6,7 @@ const VRCHAT_MAX_ALLOWED_STATUS_LENGTH: usize = 23;
 
 pub fn format_fronts_for_vrchat_status(
     config: &Config,
-    fronts: Vec<simply_plural::MemberContent>,
+    fronts: &[simply_plural::MemberContent],
 ) -> String {
     let cleaned_fronter_names = clean_fronter_names(fronts, &config.vrchat_updater_no_fronts);
     eprintln!("Cleaned fronter names for status: {cleaned_fronter_names:?}");
@@ -14,18 +14,18 @@ pub fn format_fronts_for_vrchat_status(
     let status_strings =
         compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_tradeoff(
             config,
-            cleaned_fronter_names,
+            &cleaned_fronter_names,
         );
 
-    pick_longest_string_within_vrchat_status_length_limit(status_strings)
+    pick_longest_string_within_vrchat_status_length_limit(&status_strings)
 }
 
 fn clean_fronter_names(
-    fronts: Vec<simply_plural::MemberContent>,
-    name_if_no_fronters: &String,
+    fronts: &[simply_plural::MemberContent],
+    name_if_no_fronters: &str,
 ) -> Vec<String> {
     if fronts.is_empty() {
-        vec![name_if_no_fronters.clone()] // Use configured string if no fronters
+        vec![name_if_no_fronters.to_owned()] // Use configured string if no fronters
     } else {
         fronts
             .iter()
@@ -36,7 +36,7 @@ fn clean_fronter_names(
 
 fn compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_tradeoff(
     config: &Config,
-    fronter_names: Vec<String>,
+    fronter_names: &[String],
 ) -> Vec<String> {
     // Convert Vec<String> to Vec<&str> for convenient joining and slicing.
     let fronter_names_as_str: Vec<&str> = fronter_names.iter().map(String::as_str).collect();
@@ -91,7 +91,7 @@ fn compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_t
     vec![long_string, short_string, truncated_string]
 }
 
-fn pick_longest_string_within_vrchat_status_length_limit(status_strings: Vec<String>) -> String {
+fn pick_longest_string_within_vrchat_status_length_limit(status_strings: &[String]) -> String {
     let empty_string = String::new();
     status_strings
         .iter()
@@ -142,11 +142,12 @@ mod tests {
         no_fronts: &str,
         name_truncate_to: usize,
     ) -> Config {
-        let mut config = Config::default();
-        config.vrchat_updater_prefix = prefix.to_string();
-        config.vrchat_updater_no_fronts = no_fronts.to_string();
-        config.vrchat_updater_truncate_names_to = name_truncate_to;
-        config
+        Config {
+            vrchat_updater_prefix: prefix.to_string(),
+            vrchat_updater_no_fronts: no_fronts.to_string(),
+            vrchat_updater_truncate_names_to: name_truncate_to,
+            ..Default::default()
+        }
     }
 
     // Helper function to create mock MemberContent
@@ -160,6 +161,7 @@ mod tests {
             name: name.to_string(),
             avatar_url: String::new(),
             vrcsn_field_id: Some("0".to_string()),
+            #[allow(clippy::unwrap_used)]
             info: serde_json::from_str(&info_as_json).unwrap(),
         }
     }
@@ -169,7 +171,7 @@ mod tests {
         let config = mock_config_for_format_tests("F:", "nobody?", 3);
         let fronts = vec![];
         assert_eq!(
-            format_fronts_for_vrchat_status(&config, fronts),
+            format_fronts_for_vrchat_status(&config, &fronts),
             "F: nobody?"
         );
     }
@@ -178,7 +180,10 @@ mod tests {
     fn test_format_vrchat_status_single_member_fits_long_string() {
         let config = mock_config_for_format_tests("F:", "N/A", 3);
         let fronts = vec![mock_member_content("Alice", "")]; // "P: Alice" (8 chars)
-        assert_eq!(format_fronts_for_vrchat_status(&config, fronts), "F: Alice");
+        assert_eq!(
+            format_fronts_for_vrchat_status(&config, &fronts),
+            "F: Alice"
+        );
     }
 
     #[test]
@@ -189,7 +194,7 @@ mod tests {
             mock_member_content("Bob", ""),
         ]; // "P: Alice, Bob" (13 chars)
         assert_eq!(
-            format_fronts_for_vrchat_status(&config, fronts),
+            format_fronts_for_vrchat_status(&config, &fronts),
             "F: Alice, Bob"
         );
     }
@@ -205,7 +210,7 @@ mod tests {
         // Long: "Status: UserOne, UserTwo" (24 chars) > 23
         // Short: "Status:UserOne,UserTwo" (23 chars) <= 23
         assert_eq!(
-            format_fronts_for_vrchat_status(&config, fronts),
+            format_fronts_for_vrchat_status(&config, &fronts),
             "Status:UserOne,UserTwo"
         );
     }
@@ -222,7 +227,7 @@ mod tests {
         // Short: "P:Alexander,Benjamin,Charlotte" 31 > 23
         // Truncated: "P:Ale,Ben,Cha" 14 <= 23
         assert_eq!(
-            format_fronts_for_vrchat_status(&config, fronts),
+            format_fronts_for_vrchat_status(&config, &fronts),
             "F:Ale,Ben,Cha"
         );
     }
@@ -232,7 +237,7 @@ mod tests {
         let config = mock_config_for_format_tests("F:", "N/A", 3);
         let fronts = vec![mock_member_content("OriginalName", "VRChatSpecific")];
         assert_eq!(
-            format_fronts_for_vrchat_status(&config, fronts),
+            format_fronts_for_vrchat_status(&config, &fronts),
             "F: VRChatSpecific"
         );
     }
@@ -242,7 +247,7 @@ mod tests {
         let config = mock_config_for_format_tests("F:", "N/A", 3);
         let fronts = vec![mock_member_content("User😊Name", "")];
         assert_eq!(
-            format_fronts_for_vrchat_status(&config, fronts),
+            format_fronts_for_vrchat_status(&config, &fronts),
             "F: UserName"
         );
     }
@@ -261,7 +266,7 @@ mod tests {
         // Truncated names: Long, VRC1, Anot
         // Truncated string: "F:Long,VRC1,Anot" 17 <= 23
         assert_eq!(
-            format_fronts_for_vrchat_status(&config, fronts),
+            format_fronts_for_vrchat_status(&config, &fronts),
             "F:Long,VRC1,Anot"
         );
     }

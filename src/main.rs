@@ -22,7 +22,7 @@ mod webserver;
 fn main() -> Result<()> {
     let cli_args = config_store::CliArgs::parse();
 
-    let config = run_async_blocking(setup_and_load_config(&cli_args))?;
+    let config = setup_and_load_config(&cli_args)?;
 
     if cli_args.webserver {
         eprintln!("Running in Webserver mode ...");

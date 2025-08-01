@@ -1,3 +1,5 @@
+use std::string::ToString;
+
 use anyhow::Result;
 use serde::Deserialize;
 
@@ -22,8 +24,9 @@ pub async fn fetch_fronts(config: &Config) -> Result<Vec<MemberContent>> {
     Ok(fronts_with_vrchat_custom_field)
 }
 
+#[allow(clippy::ref_option)]
 fn enrich_fronters_with_vrchat_status_field(
-    fronts: &Vec<MemberContent>,
+    fronts: &[MemberContent],
     vrcsn_field_id: &Option<String>,
 ) -> Vec<MemberContent> {
     fronts
@@ -158,16 +161,16 @@ pub struct MemberContent {
 
 impl MemberContent {
     pub fn preferred_vrchat_status_name(&self) -> String {
-        match &self.vrcsn_field_id {
-            None => self.name.clone(),
-            Some(field_id) => self
-                .info
-                .as_object()
-                .and_then(|custom_fields| custom_fields.get(field_id))
-                .and_then(|value| value.as_str())
-                .map(std::string::ToString::to_string)
-                .unwrap_or(self.name.clone()),
-        }
+        self.vrcsn_field_id.as_ref().map_or_else(
+            || self.name.clone(),
+            |field_id| {
+                self.info
+                    .as_object()
+                    .and_then(|custom_fields| custom_fields.get(field_id))
+                    .and_then(|value| value.as_str())
+                    .map_or_else(|| self.name.clone(), ToString::to_string)
+            },
+        )
     }
 }
 

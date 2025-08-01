@@ -17,39 +17,21 @@ jobs:
     - name: Install Rust, Cargo and rustup
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache Cargo dependencies
+    - name: Get cached Cargo dependencies
       uses: actions/cache@v4
       with:
         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
+          ~/.cargo/
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install prerequisites
+      run: ./release/ci-install-dependencies.sh
+    
+    - name: Build All
       run: |
-        sudo apt update
-
-        # Tauri
-        cargo install tauri-cli --version "^2" --locked
-        sudo apt-get install \
-          libwebkit2gtk-4.1-dev \
-          build-essential \
-          curl \
-          wget \
-          file \
-          libxdo-dev \
-          libssl-dev \
-          libayatana-appindicator3-dev \
-          librsvg2-dev
-
-        # MinGW toolchains for Windows targets
-        sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
-
-    - name: Unit tests
-      run: ./test/unit-tests.sh
+        ./release/cargo-build.sh
+        ./dev/tauri-build.sh
 
     - name: Webserver Integration Tests
       env:

@@ -27,4 +27,4 @@ clap = { version = "4", features = [ "derive"] }
 directories = "6.0.0"
 
 [build-dependencies]
-tauri-build = { version = "2.2", features = [] }
+tauri-build = { version = "2", features = [] }

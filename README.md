@@ -84,5 +84,5 @@ That can be manually edited as well as configured via the GUI.
 
 ### TODO
 
-* Add support for custom fronts
+* rename binary from sps_status to sp2any
 * make ./release/lint.sh into CI. also add check that generated config example.json is equal to comitted one.

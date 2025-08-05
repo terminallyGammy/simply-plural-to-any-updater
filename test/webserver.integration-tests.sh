@@ -59,7 +59,7 @@ start_webserver() {
     export SYSTEM_PUBLIC_NAME="SP-Updater-Test"
     write_env_vars_to_config_json
 
-    (./target/release/sps_status --webserver --config "$CONFIG_FILE" 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
+    (./target/release/sp2any --webserver --config "$CONFIG_FILE" 2>&1 | tee .log | sed 's/^/sp2any | /' ) &
 
     sleep 1s
 
@@ -67,7 +67,7 @@ start_webserver() {
 }
 
 stop_webserver() {
-    pkill -f sps_status || true
+    pkill -f sp2any || true
     echo "Stopped webserver."
 }
 

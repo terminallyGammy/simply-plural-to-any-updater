@@ -96,7 +96,7 @@ check_updater_failure_and_loop_continues() {
 start_vrc_updater() {
     write_env_vars_to_config_json
 
-    (./target/release/sps_status --no-gui --config "$CONFIG_FILE" 2>&1 | tee .log | sed 's/^/sps_status | /' ) &
+    (./target/release/sp2any --no-gui --config "$CONFIG_FILE" 2>&1 | tee .log | sed 's/^/sp2any | /' ) &
 
     sleep 5s
 
@@ -104,7 +104,7 @@ start_vrc_updater() {
 }
 
 stop_vrc_updater() {
-    pkill -f sps_status || true
+    pkill -f sp2any || true
     echo "Stopped VRC Updater."
 }
 

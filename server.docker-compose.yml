@@ -1,18 +1,18 @@
 services:
-  sps-status:
+  sp2any:
     build:
       dockerfile: server.Dockerfile
       context: "."
-    image: "sps-status:latest"
-    container_name: sps-status
+    image: "sp2any:latest"
+    container_name: sp2any
     env_file:
       - release/config/server.defaults.env
       - server.env
     restart: "on-failure:2"
     networks:
-      - sps-status-net
+      - sp2any-net
 
 networks:
-  sps-status-net:
-    name: sps-status-net
+  sp2any-net:
+    name: sp2any-net
     driver: bridge

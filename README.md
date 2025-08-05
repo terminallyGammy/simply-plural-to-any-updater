@@ -69,6 +69,11 @@ To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
 
 Use `--config <filepath>` to specify an alternate directory where the config is stored and retrieved from.
 
+Use the following prompt against the code agent to put it to work:
+```
+Ensure the project adheres to the coding guidelines.
+```
+
 ### Current Migration
 
 Migrate from directory local .env files to storing a .json in the home directoy.

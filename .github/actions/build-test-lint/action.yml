@@ -24,6 +24,12 @@ runs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+    - name: Get cached apt packages
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-${{ hashFiles('release/ci-install-dependencies.sh') }}
+
     - name: Install prerequisites
       shell: bash
       run: ./release/ci-install-dependencies.sh

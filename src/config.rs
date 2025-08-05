@@ -3,10 +3,7 @@ use reqwest::Client;
 use std::time;
 use time::Duration;
 
-use crate::config_store;
-use crate::config_store::CliArgs;
-use crate::config_store::LocalConfigV2Field;
-use crate::config_store::LocalJsonConfigV2;
+use crate::config_store::{self, CliArgs, LocalConfigV2Field, LocalJsonConfigV2};
 
 #[derive(Debug, Clone, Default)]
 pub struct Config {

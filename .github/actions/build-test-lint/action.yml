@@ -24,11 +24,11 @@ runs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Get cached apt packages
+    - name: Get cached npm packages
       uses: actions/cache@v4
       with:
-        path: /var/cache/apt/archives
-        key: ${{ runner.os }}-apt-${{ hashFiles('release/ci-install-dependencies.sh') }}
+        path: frontend/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
 
     - name: Install prerequisites
       shell: bash

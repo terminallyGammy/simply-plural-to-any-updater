@@ -73,6 +73,10 @@ Use the following prompt against the code agent to put it to work:
 ```
 Ensure the project adheres to the coding guidelines.
 ```
+or
+```
+Update the dependencies.
+```
 
 ### Current Migration
 

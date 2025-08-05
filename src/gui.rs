@@ -1,11 +1,51 @@
 use anyhow::{anyhow, Result};
-use tauri::{self, tray::TrayIcon};
+use tauri::{self, Manager, State};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::TrayIcon,
+    Emitter,
+};
 
-use crate::{config::Config, vrchat};
+use crate::{config::Config, config_store, vrchat};
+
+/* Payload for single instance of the program*/
+#[derive(Clone, serde::Serialize)]
+struct Payload {
+    args: Vec<String>,
+    cwd: String,
+}
+
+struct AppState {
+    cli_args: config_store::CliArgs,
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+fn get_config(state: State<AppState>) -> Result<config_store::LocalJsonConfigV2, String> {
+    config_store::read_local_config_file(&state.cli_args).map_err(|e| e.to_string())
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+fn set_config(
+    state: State<AppState>,
+    config: config_store::LocalJsonConfigV2,
+) -> Result<(), String> {
+    config_store::write_local_config_file(&config, &state.cli_args).map_err(|e| e.to_string())
+}
 
 pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+            eprintln!("{}, {argv:?}, {cwd}", app.package_info().name);
+            app.emit("single-instance", Payload { args: argv, cwd })
+                .unwrap();
+        }))
+        .manage(AppState {
+            cli_args: config.cli_args.clone(),
+        })
+        .invoke_handler(tauri::generate_handler![get_config, set_config])
         .setup(|app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 
@@ -20,8 +60,10 @@ pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
 }
 
 fn tauri_system_tray_handler(app: &tauri::App) -> Result<TrayIcon> {
-    let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = tauri::menu::Menu::with_items(app, &[&quit_i])?;
+    let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+    let hide_i = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show_i, &hide_i, &quit_i])?;
 
     tauri::tray::TrayIconBuilder::new()
         .icon(
@@ -30,16 +72,29 @@ fn tauri_system_tray_handler(app: &tauri::App) -> Result<TrayIcon> {
                 .clone(),
         )
         .menu(&menu)
-        .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "quit" => {
                 eprintln!("tauri: menu event quit.");
                 app.exit(0);
             }
+            "show" => {
+                eprintln!("tauri: menu event show.");
+                if let Some(window) = app.get_webview_window("main") {
+                    window.show().unwrap();
+                    window.set_focus().unwrap();
+                }
+            }
+            "hide" => {
+                eprintln!("tauri: menu event hide.");
+                if let Some(window) = app.get_webview_window("main") {
+                    window.hide().unwrap();
+                }
+            }
             unknown => {
                 eprintln!("tauri: menu event {unknown} unknown.");
             }
         })
+        .show_menu_on_left_click(true)
         .build(app)
         .map_err(|e| anyhow!(e))
 }

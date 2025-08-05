@@ -17,7 +17,7 @@ pub struct CliArgs {
     pub webserver: bool,
 
     // Path to local json config file, if not default
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = String::new())]
     pub config: String,
 }
 
@@ -92,9 +92,9 @@ pub fn read_local_config_file(cli_args: &CliArgs) -> Result<LocalJsonConfigV2> {
     Ok(local_config)
 }
 
-fn write_local_config_file(local_config: &LocalJsonConfigV2, cli_args: &CliArgs) -> Result<()> {
+pub fn write_local_config_file(local_config: &LocalJsonConfigV2, cli_args: &CliArgs) -> Result<()> {
     let config_file_path = local_json_config_file_path("write", cli_args)?;
-    let config_as_string = serde_json::to_string(local_config)?;
+    let config_as_string = serde_json::to_string_pretty(local_config)?;
     fs::write(config_file_path, config_as_string)?;
     Ok(())
 }

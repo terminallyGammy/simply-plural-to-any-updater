@@ -2,7 +2,7 @@
 target
 
 # Env files
-*.env
+/*.env
 !*defaults*.env
 !vrcupdater.sample.env
 

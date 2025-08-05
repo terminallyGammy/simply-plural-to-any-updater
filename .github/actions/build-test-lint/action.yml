@@ -1,0 +1,62 @@
+name: 'Build, Test and Lint'
+inputs:
+  SPS_API_TOKEN:
+    required: true
+  SPS_API_WRITE_TOKEN:
+    required: true
+  VRCHAT_USERNAME:
+    required: true
+  VRCHAT_PASSWORD:
+    required: true
+  VRCHAT_COOKIE:
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust, Cargo and rustup
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Get cached Cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install prerequisites
+      shell: bash
+      run: ./release/ci-install-dependencies.sh
+
+    - name: Build
+      shell: bash
+      run: |
+        ./release/cargo-build.sh
+        ./dev/tauri-build.sh
+
+    - name: Unit tests
+      shell: bash
+      run: ./test/unit-tests.sh
+
+    - name: Webserver Integration Tests
+      shell: bash
+      env:
+        SPS_API_TOKEN: ${{ inputs.SPS_API_TOKEN }}
+        SPS_API_WRITE_TOKEN: ${{ inputs.SPS_API_WRITE_TOKEN }}
+      run: ./test/webserver.integration-tests.sh
+
+    - name: VRC Updater Integration Tests
+      shell: bash
+      env:
+        SPS_API_TOKEN: ${{ inputs.SPS_API_TOKEN }}
+        SPS_API_WRITE_TOKEN: ${{ inputs.SPS_API_WRITE_TOKEN }}
+        VRCHAT_USERNAME: ${{ inputs.VRCHAT_USERNAME }}
+        VRCHAT_PASSWORD: ${{ inputs.VRCHAT_PASSWORD }}
+        VRCHAT_COOKIE: ${{ inputs.VRCHAT_COOKIE }}
+      run: ./test/vrcupdater.integration-tests.sh
+
+    - name: Lint
+      shell: bash
+      run: |
+        ./release/lint.sh
+        git diff --exit-code

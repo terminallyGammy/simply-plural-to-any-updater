@@ -14,39 +14,14 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install Rust, Cargo and rustup
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Get cached Cargo dependencies
-      uses: actions/cache@v4
+    - name: Run Tests
+      uses: ./.github/actions/build-test-lint
       with:
-        path: |
-          ~/.cargo/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Install prerequisites
-      run: ./release/ci-install-dependencies.sh
-    
-    - name: Build All
-      run: |
-        ./release/cargo-build.sh
-        ./dev/tauri-build.sh
-
-    - name: Webserver Integration Tests
-      env:
-        SPS_API_TOKEN: ${{ secrets.SPS_API_TOKEN }}
-        SPS_API_WRITE_TOKEN: ${{ secrets.SPS_API_WRITE_TOKEN }}
-      run: ./test/webserver.integration-tests.sh
-
-    - name: VRC Updater Integration Tests
-      env:
         SPS_API_TOKEN: ${{ secrets.SPS_API_TOKEN }}
         SPS_API_WRITE_TOKEN: ${{ secrets.SPS_API_WRITE_TOKEN }}
         VRCHAT_USERNAME: ${{ secrets.VRCHAT_USERNAME }}
         VRCHAT_PASSWORD: ${{ secrets.VRCHAT_PASSWORD }}
         VRCHAT_COOKIE: ${{ secrets.VRCHAT_COOKIE }}
-      run: ./test/vrcupdater.integration-tests.sh
 
     - name: Run build script
       run: "./release-build.sh"

@@ -69,6 +69,8 @@ To create a release, simply push a corresponding tag - e.g. `v1.2.3`.
 
 Use `--config <filepath>` to specify an alternate directory where the config is stored and retrieved from.
 
+Check dependencies bloat via `cargo bloat --release --bin sp2any`.
+
 Use the following prompt against the code agent to put it to work:
 ```
 Ensure the project adheres to the coding guidelines.

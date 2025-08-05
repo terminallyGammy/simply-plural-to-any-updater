@@ -1,4 +1,7 @@
-use crate::{config::Config, simply_plural, vrchat_auth, vrchat_status};
+use crate::config::Config;
+use crate::simply_plural;
+use crate::vrchat_auth;
+use crate::vrchat_status;
 use anyhow::{Ok, Result};
 use chrono::Utc;
 use std::thread;

@@ -1,12 +1,13 @@
-use anyhow::{anyhow, Result};
-use tauri::{self, Manager, State};
-use tauri::{
-    menu::{Menu, MenuItem},
-    tray::TrayIcon,
-    Emitter,
-};
+/* File is WORK-IN-PROGRESS */
 
-use crate::{config::Config, config_store, vrchat};
+use anyhow::{anyhow, Result};
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::TrayIcon;
+use tauri::{self, Emitter, Manager, State};
+
+use crate::config::Config;
+use crate::config_store;
+use crate::vrchat;
 
 /* Payload for single instance of the program*/
 #[derive(Clone, serde::Serialize)]

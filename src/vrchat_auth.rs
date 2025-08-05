@@ -1,9 +1,9 @@
-use crate::{
-    config::Config,
-    config_store::{self},
-};
+use crate::config::Config;
+use crate::config_store;
+
 use anyhow::{anyhow, Error, Result};
 use reqwest::{
+    self,
     cookie::{self, CookieStore},
     Url,
 };

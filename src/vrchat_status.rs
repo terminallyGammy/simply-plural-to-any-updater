@@ -1,4 +1,5 @@
-use crate::{config::Config, simply_plural};
+use crate::config::Config;
+use crate::simply_plural;
 
 use encoding_rs::ISO_8859_15;
 

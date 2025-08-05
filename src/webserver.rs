@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::simply_plural::{self};
+use crate::simply_plural;
 use anyhow::{anyhow, Result};
 use rocket::{
     response::{self, content::RawHtml},

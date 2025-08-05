@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
-use std::{fs, time};
-use time::Duration;
+use std::fs;
+use std::time::Duration;
 
 #[derive(Parser, Debug, Clone, Default)]
 #[clap(author, version, about, long_about = None)]

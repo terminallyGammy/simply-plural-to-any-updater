@@ -8,11 +8,11 @@ LATEST_RELEASE_URL="$( curl -w "%{url_effective}\n" -o /dev/null -I -L -s -S htt
 
 echo "Using latest release from: $LATEST_RELEASE_URL"
 
-DOWNLOAD_URL="$( echo "${LATEST_RELEASE_URL/tag/download}"/SP2VRC-Linux )"
+DOWNLOAD_URL="$( echo "${LATEST_RELEASE_URL/tag/download}"/SP2Any-Linux )"
 
-echo "Downloading binary from to $DOWNLOAD_URL to target/SP2VRC-Linux"
+echo "Downloading binary from to $DOWNLOAD_URL to target/SP2Any-Linux"
 
-curl -L -s -o target/SP2VRC-Linux "$DOWNLOAD_URL"
+curl -L -s -o target/SP2Any-Linux "$DOWNLOAD_URL"
 
 docker compose -f server.docker-compose.yml build
 docker compose -f server.docker-compose.yml up -d

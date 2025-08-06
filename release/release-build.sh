@@ -54,7 +54,7 @@ build_binaries() {
             platform_label="Linux"
         fi
 
-        final_executable_name="SP2VRC-${platform_label}${exe_suffix}"
+        final_executable_name="SP2Any-${platform_label}${exe_suffix}"
 
         # Path to the binary produced by cargo
         src_path="target/${target}/release/${PROJECT_BINARY_NAME}${exe_suffix}"

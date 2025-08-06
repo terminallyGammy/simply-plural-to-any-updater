@@ -1,20 +1,27 @@
 use crate::config::Config;
+use crate::fronting_status;
 use crate::simply_plural;
-use crate::vrchat_status;
 use anyhow::{Ok, Result};
 use vrchatapi::{
     apis::{configuration::Configuration, users_api},
     models::UpdateUserRequest,
 };
 
-pub async fn updater_loop_logic(
+pub async fn update_to_vrchat(
     config: &Config,
     vrchat_config: &Configuration,
+    fronts: &[simply_plural::Fronter],
     user_id: &str,
 ) -> Result<()> {
-    let fronts = simply_plural::fetch_fronts(config).await?;
+    let fronting_format = fronting_status::FrontingFormat {
+        max_length: Some(fronting_status::VRCHAT_MAX_ALLOWED_STATUS_LENGTH),
+        cleaning: fronting_status::CleanForPlatform::VRChat,
+        prefix: config.vrchat_updater_prefix.clone(),
+        status_if_no_fronters: config.vrchat_updater_no_fronts.clone(),
+        truncate_names_to_length_if_status_too_long: config.vrchat_updater_truncate_names_to,
+    };
 
-    let status_string = vrchat_status::format_fronts_for_vrchat_status(config, &fronts);
+    let status_string = fronting_status::format_fronting_status(&fronting_format, fronts);
 
     set_vrchat_status(vrchat_config, user_id, status_string.as_str()).await
 }

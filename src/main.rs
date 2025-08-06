@@ -13,12 +13,12 @@ use tokio::runtime;
 mod config;
 mod config_store;
 mod discord;
+mod fronting_status;
 mod gui;
 mod simply_plural;
 mod updater;
 mod vrchat;
 mod vrchat_auth;
-mod vrchat_status;
 mod webserver;
 
 fn main() -> Result<()> {

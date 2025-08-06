@@ -87,7 +87,7 @@ setup_sp_rest_failure() {
 
 check_updater_failure_and_loop_continues() {
     SPS_API_TOKEN="$FUNCTIONAL_SPS_API_TOKEN"
-    grep -q "Error in VRChat Updater Loop" .log
+    grep -q "Error: " .log
     grep -q "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..." .log
 }
 

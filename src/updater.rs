@@ -1,10 +1,9 @@
 use std::thread;
 
-use crate::{config::Config, discord, vrchat, vrchat_auth};
+use crate::{config::Config, discord, simply_plural, vrchat, vrchat_auth};
 use anyhow::{Ok, Result};
 use chrono::Utc;
 
-#[allow(clippy::or_fun_call)]
 pub async fn run_loop(config: &Config) -> Result<()> {
     eprintln!("Running VRChat Updater ...");
 
@@ -16,19 +15,10 @@ pub async fn run_loop(config: &Config) -> Result<()> {
             Utc::now().format("%Y-%m-%d %H:%M:%S")
         );
 
-        vrchat::updater_loop_logic(config, &vrchat_config, &user_id)
-            .await
-            .inspect_err(|err| {
-                eprintln!("Error in VRChat Updater Loop. Skipping update. Error: {err}");
-            })
-            .or(Ok(()))?;
-
-        discord::updater_loop_login(config)
-            .await
-            .inspect_err(|err| {
-                eprintln!("Error in Discord Updater Loop. Skipping update. Error: {err}");
-            })
-            .or(Ok(()))?;
+        log_error_and_continue(
+            "Updater Logic",
+            loop_logic(config, &vrchat_config, &user_id).await,
+        );
 
         eprintln!(
             "Waiting {}s for next update trigger...",
@@ -36,5 +26,31 @@ pub async fn run_loop(config: &Config) -> Result<()> {
         );
 
         thread::sleep(config.wait_seconds);
+    }
+}
+
+async fn loop_logic(
+    config: &Config,
+    vrchat_config: &vrchatapi::apis::configuration::Configuration,
+    user_id: &str,
+) -> Result<()> {
+    let fronts = simply_plural::fetch_fronts(config).await?;
+
+    log_error_and_continue(
+        "VRChat",
+        vrchat::update_to_vrchat(config, vrchat_config, &fronts, user_id).await,
+    );
+
+    log_error_and_continue("Discord", discord::update_to_discord(config, &fronts).await);
+
+    Ok(())
+}
+
+fn log_error_and_continue(loop_part_name: &str, res: Result<()>) {
+    match res {
+        core::result::Result::Ok(()) => {}
+        Err(err) => {
+            eprintln!("Error in {loop_part_name}. Skipping update. Error: {err}");
+        }
     }
 }

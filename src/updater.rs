@@ -4,7 +4,7 @@ use crate::{config::Config, discord, vrchat, vrchat_auth};
 use anyhow::{Ok, Result};
 use chrono::Utc;
 
-
+#[allow(clippy::or_fun_call)]
 pub async fn run_loop(config: &Config) -> Result<()> {
     eprintln!("Running VRChat Updater ...");
 
@@ -16,7 +16,6 @@ pub async fn run_loop(config: &Config) -> Result<()> {
             Utc::now().format("%Y-%m-%d %H:%M:%S")
         );
 
-        #[allow(clippy::or_fun_call)]
         vrchat::updater_loop_logic(config, &vrchat_config, &user_id)
             .await
             .inspect_err(|err| {

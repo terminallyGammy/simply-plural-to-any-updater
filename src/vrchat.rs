@@ -7,8 +7,7 @@ use vrchatapi::{
     models::UpdateUserRequest,
 };
 
-
-pub(crate) async fn updater_loop_logic(
+pub async fn updater_loop_logic(
     config: &Config,
     vrchat_config: &Configuration,
     user_id: &str,

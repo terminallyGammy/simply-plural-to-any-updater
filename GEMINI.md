@@ -10,7 +10,7 @@ Only do the tasks described in the following sections if explicitly requested to
   * Bad: the above imports on separate lines/statements for each imported object
 * Rust import statements should use separate lines for imports from different modules originating from this project.
 * After made all changes, run a final `./release/lint.sh` and summarise the changes to make.
-  * There should be no warnings or errors in files which don't have a `WORK-IN-PROGRESS` marker at the top.
+  * Warnings or errors are only allowed for files which have a `WORK-IN-PROGRESS` marker at the top.
 
 
 ## Update Dependencies

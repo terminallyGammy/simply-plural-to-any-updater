@@ -1,44 +1,14 @@
 use crate::config::Config;
 use crate::simply_plural;
-use crate::vrchat_auth;
 use crate::vrchat_status;
 use anyhow::{Ok, Result};
-use chrono::Utc;
-use std::thread;
 use vrchatapi::{
     apis::{configuration::Configuration, users_api},
     models::UpdateUserRequest,
 };
 
-pub async fn run_updater_loop(config: &Config) -> Result<()> {
-    eprintln!("Running VRChat Updater ...");
 
-    let (vrchat_config, user_id) = vrchat_auth::authenticate_vrchat(config).await?;
-
-    loop {
-        eprintln!(
-            "\n\n======================= UTC {}",
-            Utc::now().format("%Y-%m-%d %H:%M:%S")
-        );
-
-        #[allow(clippy::or_fun_call)]
-        updater_loop_logic(config, &vrchat_config, &user_id)
-            .await
-            .inspect_err(|err| {
-                eprintln!("Error in VRChat Updater Loop. Skipping update. Error: {err}");
-            })
-            .or(Ok(()))?;
-
-        eprintln!(
-            "Waiting {}s for next update trigger...",
-            config.wait_seconds.as_secs()
-        );
-
-        thread::sleep(config.wait_seconds);
-    }
-}
-
-async fn updater_loop_logic(
+pub(crate) async fn updater_loop_logic(
     config: &Config,
     vrchat_config: &Configuration,
     user_id: &str,

@@ -12,8 +12,10 @@ use tokio::runtime;
 
 mod config;
 mod config_store;
+mod discord;
 mod gui;
 mod simply_plural;
+mod updater;
 mod vrchat;
 mod vrchat_auth;
 mod vrchat_status;
@@ -29,7 +31,7 @@ fn main() -> Result<()> {
         run_async_blocking(webserver::run_server(config))?;
     } else if cli_args.no_gui {
         eprintln!("Running SP2Any Updater in console mode ...");
-        run_async_blocking(vrchat::run_updater_loop(&config))?;
+        run_async_blocking(updater::run_loop(&config))?;
     } else {
         eprintln!("Starting SP2Any Updater in GUI mode ...");
         gui::run_tauri_gui(config)?;

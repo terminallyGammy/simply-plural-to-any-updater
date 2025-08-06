@@ -1,4 +1,4 @@
-/* File is WORK-IN-PROGRESS */
+/* WORK-IN-PROGRESS */
 
 use anyhow::{anyhow, Result};
 use tauri::menu::{Menu, MenuItem};
@@ -6,8 +6,7 @@ use tauri::tray::TrayIcon;
 use tauri::{self, Emitter, Manager, State};
 
 use crate::config::Config;
-use crate::config_store;
-use crate::vrchat;
+use crate::{config_store, updater};
 
 /* Payload for single instance of the program*/
 #[derive(Clone, serde::Serialize)]
@@ -50,7 +49,7 @@ pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
         .setup(|app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 
-            tauri::async_runtime::spawn(async move { vrchat::run_updater_loop(&config).await });
+            tauri::async_runtime::spawn(async move { updater::run_loop(&config).await });
 
             tauri_system_tray_handler(app)?;
 

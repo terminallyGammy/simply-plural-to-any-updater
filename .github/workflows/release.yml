@@ -43,3 +43,4 @@ jobs:
         files: "target/release_builds/*"
         body_path: ${{ steps.changelog.outputs.notes_file }}
         prerelease: ${{ env.IS_PRERELEASE }}
+        draft: false

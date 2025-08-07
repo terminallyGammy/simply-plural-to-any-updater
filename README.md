@@ -111,10 +111,12 @@ That can be manually edited as well as configured via the GUI.
 * don't offer a way to migrate from old .env file. keep code simple there.
 * update README.md
 
+Furthermore, the following is how the GUI should look like:
+* a main page where one can see the various updaters (VRChat and Discord) and their status (Running, Error, Paused, Inactive)
+* a settings page where one can configure these things
+
 ### TODO
 
-* Add documentation about discord sync
 * Make it such that discord/vrchat sync is enabled specifically and don't have to be both activated at the same time
-* Rename 'VRChat Status Name' field to 'Clean Status Name' field
+* Rename 'VRChat Status Name' field to 'SP2Any Simple Name' field
 * Ask on Reddit and various discord servers for what features the users want
-* make ./release/lint.sh into CI. also add check that generated config example.json is equal to comitted one.

@@ -12,17 +12,19 @@ set -euo pipefail
 
 [[ "$VRCHAT_COOKIE" != "" ]]
 
+[[ "$DISCORD_TOKEN" != "" ]]
+
 source ./test/source.sh
 source ./test/plural_system_to_test.sh
 
 main() {
-    stop_vrc_updater
+    stop_updater
 
     ./release/cargo-build.sh
 
     set_system_fronts_set "A"
     
-    start_vrc_updater
+    start_updater
 
     check_system_fronts_set "A"
     
@@ -33,20 +35,20 @@ main() {
     check_system_fronts_set "B"
 
 
-    stop_vrc_updater
+    stop_updater
 
     setup_sp_rest_failure
 
-    start_vrc_updater
+    start_updater
 
     check_updater_failure_and_loop_continues
 
 
-    stop_vrc_updater
+    stop_updater
 
     clear_all_fronts
 
-    echo "✅✅✅ VRC Updater Integration Test ✅✅✅"
+    echo "✅✅✅ Updater Integration Test ✅✅✅"
 }
 
 
@@ -55,8 +57,10 @@ check_system_fronts_set() {
 
     if [[ "$SET" == "A" ]]; then
         check_vrc_status_string_equals "F˸Ann‚Bor‚Dae‚Cst"
+        check_discord_status_string_equals "F: Annalea 💖 A., Borgn B., Daenssa 📶 D., Cstm First"
     elif [[ "$SET" == "B" ]]; then
         check_vrc_status_string_equals "F˸ tešt t․"
+        check_discord_status_string_equals "F: tešt ▶️ t."
     else
         return 1
     fi
@@ -69,12 +73,27 @@ check_vrc_status_string_equals() {
     RESPONSE="$(curl -s "https://api.vrchat.cloud/api/1/auth/user" \
         --cookie "$VRCHAT_COOKIE" \
         -u "$VRCHAT_USERNAME:$VRCHAT_PASSWORD" \
-        -H "User-Agent: SimplyPluralToVRChatUpdaterTest/0.1.0 does-not-exist-792374@gmail.com"
+        -H "User-Agent: SP2Any/0.1.0 does-not-exist-792374@gmail.com"
     )"
 
     STATUS="$( echo "$RESPONSE" | jq -r .statusDescription)"
 
     echo "VRC Status Check: '$STATUS' =? '$EXPECTED'"
+
+    [[ "$STATUS" == "$EXPECTED" ]]
+}
+
+check_discord_status_string_equals() {
+    EXPECTED="$1"
+
+    RESPONSE="$(curl -s \
+        "https://discord.com/api/v10/users/@me/settings" \
+        -H "Authorization: $DISCORD_TOKEN"
+    )"
+
+    STATUS="$( echo "$RESPONSE" | jq -r .custom_status.text )"
+
+    echo "Discord Status Check: '$STATUS' =? '$EXPECTED'"
 
     [[ "$STATUS" == "$EXPECTED" ]]
 }
@@ -93,19 +112,19 @@ check_updater_failure_and_loop_continues() {
 
 
 
-start_vrc_updater() {
+start_updater() {
     write_env_vars_to_config_json
 
     (./target/release/sp2any --no-gui --config "$CONFIG_FILE" 2>&1 | tee .log | sed 's/^/sp2any | /' ) &
 
     sleep 5s
 
-    echo "Started VRC Updater."
+    echo "Started Updater."
 }
 
-stop_vrc_updater() {
+stop_updater() {
     pkill -f sp2any || true
-    echo "Stopped VRC Updater."
+    echo "Stopped Updater."
 }
 
 main

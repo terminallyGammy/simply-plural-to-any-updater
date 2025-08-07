@@ -4,6 +4,8 @@ inputs:
     required: true
   SPS_API_WRITE_TOKEN:
     required: true
+  DISCORD_TOKEN:
+    required: true
   VRCHAT_USERNAME:
     required: true
   VRCHAT_PASSWORD:
@@ -56,10 +58,11 @@ runs:
       env:
         SPS_API_TOKEN: ${{ inputs.SPS_API_TOKEN }}
         SPS_API_WRITE_TOKEN: ${{ inputs.SPS_API_WRITE_TOKEN }}
+        DISCORD_TOKEN: ${{inputs.DISCORD_TOKEN}}
         VRCHAT_USERNAME: ${{ inputs.VRCHAT_USERNAME }}
         VRCHAT_PASSWORD: ${{ inputs.VRCHAT_PASSWORD }}
         VRCHAT_COOKIE: ${{ inputs.VRCHAT_COOKIE }}
-      run: ./test/vrcupdater.integration-tests.sh
+      run: ./test/updater.integration-tests.sh
 
     - name: Lint
       shell: bash

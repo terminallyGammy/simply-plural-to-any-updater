@@ -12,6 +12,7 @@ pub struct Config {
     pub system_name: String,
     pub simply_plural_token: String,
     pub simply_plural_base_url: String,
+    pub discord_token: String,
     pub vrchat_username: String,
     pub vrchat_password: String,
     pub vrchat_updater_prefix: String,
@@ -48,14 +49,20 @@ pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
         local_config_with_defaults.get_string_field(&LocalConfigV2Field::SimplyPluralBaseUrl)?;
     eprintln!("Using Simply Plural Base URL: {simply_plural_base_url}");
 
-    let needs_vrchat_config = !cli_args.webserver;
+    let needs_vrchat_or_discord_config = !cli_args.webserver;
 
-    let vrchat_username = if needs_vrchat_config {
+    let discord_token = if needs_vrchat_or_discord_config {
+        local_config_with_defaults.get_string_field(&LocalConfigV2Field::DiscordToken)?
+    }
+    else {
+        String::new()
+    };
+    let vrchat_username = if needs_vrchat_or_discord_config {
         local_config_with_defaults.get_string_field(&LocalConfigV2Field::VrchatUsername)?
     } else {
         String::new()
     };
-    let vrchat_password = if needs_vrchat_config {
+    let vrchat_password = if needs_vrchat_or_discord_config {
         local_config_with_defaults.get_string_field(&LocalConfigV2Field::VrchatPassword)?
     } else {
         String::new()
@@ -84,6 +91,7 @@ pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
         system_name,
         simply_plural_token,
         simply_plural_base_url,
+        discord_token,
         vrchat_username,
         vrchat_password,
         vrchat_updater_prefix,
@@ -119,6 +127,7 @@ impl LocalConfigV2Field {
             Self::SystemName => "Name of your System".to_string(),
             Self::SimplyPluralToken => "SimplyPlural Access Token".to_string(),
             Self::SimplyPluralBaseUrl => "SimplyPlural Remote Base URL (advanced)".to_string(),
+            Self::DiscordToken => "Discord Token".to_string(),
             Self::VrchatUsername => "VRChat Username".to_string(),
             Self::VrchatPassword => "VRChat Password".to_string(),
             Self::VrchatCookie => "VRChat Cookie (advanced)".to_string(),
@@ -143,6 +152,7 @@ impl LocalJsonConfigV2 {
             LocalConfigV2Field::SimplyPluralBaseUrl => {
                 self.simply_plural_base_url.clone().ok_or(field_err(field))
             }
+            LocalConfigV2Field::DiscordToken => self.discord_token.clone().ok_or(field_err(field)),
             LocalConfigV2Field::VrchatUsername => {
                 self.vrchat_username.clone().ok_or(field_err(field))
             }
@@ -174,6 +184,7 @@ impl LocalJsonConfigV2 {
                 .simply_plural_base_url
                 .clone()
                 .or(defaults.simply_plural_base_url),
+            discord_token: self.discord_token.clone().or(defaults.discord_token),
             vrchat_username: self.vrchat_username.clone().or(defaults.vrchat_username),
             vrchat_password: self.vrchat_password.clone().or(defaults.vrchat_password),
             vrchat_updater_prefix: self

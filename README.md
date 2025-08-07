@@ -96,6 +96,7 @@ That can be manually edited as well as configured via the GUI.
 ### TODO
 
 * Support Discord Sync
+* Make it such that discord/vrchat sync is enabled specifically and don't have to be both activated at the same time
 * Rename 'VRChat Status Name' field to 'Clean Status Name' field
 * Ask on Reddit and various discord servers for what features the users want
 * make ./release/lint.sh into CI. also add check that generated config example.json is equal to comitted one.

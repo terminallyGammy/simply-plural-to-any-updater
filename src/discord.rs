@@ -2,6 +2,19 @@
 
 use crate::{config::Config, fronting_status, simply_plural};
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct User {
+    custom_status: Status,
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Status {
+    text: String,
+}
 
 pub async fn update_to_discord(config: &Config, fronts: &[simply_plural::Fronter]) -> Result<()> {
     let fronting_format = fronting_status::FrontingFormat {
@@ -14,9 +27,36 @@ pub async fn update_to_discord(config: &Config, fronts: &[simply_plural::Fronter
 
     let status_string = fronting_status::format_fronting_status(&fronting_format, fronts);
 
+    set_discord_status(config, status_string).await?;
+
+    Ok(())
+}
+
+async fn set_discord_status(config: &Config, status_string: String) -> Result<()> {
     eprintln!("Setting Discord Status: {status_string}");
 
-    // todo. set status
+    // todo. make into separate config value
+    let discord_status_url = "https://discord.com/api/v10/users/@me/settings";
+
+    let body = User {
+        custom_status: Status {
+            text: status_string
+        }
+    };
+
+    let result: User = config
+        .client
+        .patch(discord_status_url)
+        .header("Authorization", &config.discord_token)
+        .header("Content-Type","application/json")
+        .body(serde_json::to_string(&body)?)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+
+    eprintln!("Changed Discord User: {:?}", result);
 
     Ok(())
 }

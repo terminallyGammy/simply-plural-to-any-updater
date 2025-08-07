@@ -29,6 +29,7 @@ pub struct LocalJsonConfigV2 {
     pub system_name: Option<String>,
     pub simply_plural_token: Option<String>,
     pub simply_plural_base_url: Option<String>,
+    pub discord_token: Option<String>,
     pub vrchat_username: Option<String>,
     pub vrchat_password: Option<String>,
     pub vrchat_updater_prefix: Option<String>,
@@ -53,6 +54,7 @@ pub enum LocalConfigV2Field {
     SystemName,
     SimplyPluralToken,
     SimplyPluralBaseUrl,
+    DiscordToken,
     VrchatUsername,
     VrchatPassword,
     VrchatCookie,
@@ -125,6 +127,7 @@ mod tests {
     fn generate_example_json() -> Result<()> {
         let example_config = LocalJsonConfigV2 {
             simply_plural_token: Some(String::from("simply plural token")),
+            discord_token: Some(String::from("discord token")),
             system_name: Some(String::from("Our System")),
             vrchat_username: Some(String::from("vrchat username")),
             vrchat_password: Some(String::from("vrchat password")),

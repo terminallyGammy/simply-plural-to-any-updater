@@ -53,8 +53,7 @@ pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
 
     let discord_token = if needs_vrchat_or_discord_config {
         local_config_with_defaults.get_string_field(&LocalConfigV2Field::DiscordToken)?
-    }
-    else {
+    } else {
         String::new()
     };
     let vrchat_username = if needs_vrchat_or_discord_config {

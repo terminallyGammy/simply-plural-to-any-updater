@@ -4,12 +4,10 @@ use crate::{config::Config, fronting_status, simply_plural};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct User {
     custom_status: Status,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Status {
@@ -40,15 +38,15 @@ async fn set_discord_status(config: &Config, status_string: String) -> Result<()
 
     let body = User {
         custom_status: Status {
-            text: status_string
-        }
+            text: status_string,
+        },
     };
 
     let result: User = config
         .client
         .patch(discord_status_url)
         .header("Authorization", &config.discord_token)
-        .header("Content-Type","application/json")
+        .header("Content-Type", "application/json")
         .body(serde_json::to_string(&body)?)
         .send()
         .await?
@@ -56,7 +54,7 @@ async fn set_discord_status(config: &Config, status_string: String) -> Result<()
         .json()
         .await?;
 
-    eprintln!("Changed Discord User: {:?}", result);
+    eprintln!("Changed Discord User: {result:?}");
 
     Ok(())
 }

@@ -3,7 +3,7 @@
 use anyhow::{anyhow, Result};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIcon;
-use tauri::{self, Emitter, Manager, State};
+use tauri::{Emitter, Manager, State};
 
 use crate::config::Config;
 use crate::{config_store, updater};

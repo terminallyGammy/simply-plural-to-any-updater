@@ -2,16 +2,11 @@ use crate::config::Config;
 use crate::config_store;
 
 use anyhow::{anyhow, Error, Result};
-use reqwest::{
-    self,
-    cookie::{self, CookieStore},
-    Url,
-};
-use std::{
-    io::{self, Write},
-    str::FromStr,
-    sync::Arc,
-};
+use reqwest::cookie::{self, CookieStore};
+use reqwest::Url;
+use std::io::{self, Write};
+use std::str::FromStr;
+use std::sync::Arc;
 use vrchatapi::{
     apis::{authentication_api, configuration::Configuration},
     models::{EitherUserOrTwoFactor, TwoFactorAuthCode, TwoFactorEmailCode},

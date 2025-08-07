@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Error, Result};
 use reqwest::Client;
-use std::time;
-use time::Duration;
+use std::time::Duration;
 
 use crate::config_store::{self, CliArgs, LocalConfigV2Field, LocalJsonConfigV2};
 

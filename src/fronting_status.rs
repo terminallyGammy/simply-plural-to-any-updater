@@ -90,7 +90,7 @@ fn compute_status_strings_of_decreasing_lengths_for_aesthetics_and_information_t
             truncated_names.join(",").as_str()
         )
     };
-    let count_string = format!("{}#{}", fronting_format.prefix, fronter_names.len());
+    let count_string = format!("{} {}#", fronting_format.prefix, fronter_names.len());
 
     eprintln!(
         "Long      string: '{}' ({})",
@@ -169,13 +169,14 @@ mod tests {
         prefix: &str,
         no_fronts: &str,
         name_truncate_to: usize,
+        max_length: usize,
     ) -> FrontingFormat {
         FrontingFormat {
             prefix: prefix.to_owned(),
             status_if_no_fronters: no_fronts.to_owned(),
             truncate_names_to_length_if_status_too_long: name_truncate_to,
             cleaning: CleanForPlatform::VRChat,
-            max_length: Some(VRCHAT_MAX_ALLOWED_STATUS_LENGTH),
+            max_length: Some(max_length),
         }
     }
 
@@ -195,21 +196,21 @@ mod tests {
 
     #[test]
     fn test_format_vrchat_status_empty_fronts() {
-        let config = mock_formatter_for_tests("F:", "nobody?", 3);
+        let config = mock_formatter_for_tests("F:", "nobody?", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![];
         assert_eq!(format_fronting_status(&config, &fronts), "F: nobody?");
     }
 
     #[test]
     fn test_format_vrchat_status_single_member_fits_long_string() {
-        let config = mock_formatter_for_tests("F:", "N/A", 3);
+        let config = mock_formatter_for_tests("F:", "N/A", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![mock_member_content("Alice", "")]; // "P: Alice" (8 chars)
         assert_eq!(format_fronting_status(&config, &fronts), "F: Alice");
     }
 
     #[test]
     fn test_format_vrchat_status_multiple_members_fit_long_string() {
-        let config = mock_formatter_for_tests("F:", "N/A", 3);
+        let config = mock_formatter_for_tests("F:", "N/A", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![
             mock_member_content("Alice", ""),
             mock_member_content("Bob", ""),
@@ -220,7 +221,7 @@ mod tests {
     #[test]
     fn test_format_vrchat_status_fits_short_string_not_long() {
         // VRCHAT_MAX_ALLOWED_STATUS_LENGTH is 23
-        let config = mock_formatter_for_tests("Status:", "N/A", 3);
+        let config = mock_formatter_for_tests("Status:", "N/A", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![
             mock_member_content("UserOne", ""),
             mock_member_content("UserTwo", ""),
@@ -235,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_format_vrchat_status_fits_truncated_string_not_short() {
-        let config = mock_formatter_for_tests("F:", "N/A", 3);
+        let config = mock_formatter_for_tests("F:", "N/A", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![
             mock_member_content("Alexander", ""),
             mock_member_content("Benjamin", ""),
@@ -249,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_format_vrchat_status_uses_vrchat_status_name() {
-        let config = mock_formatter_for_tests("F:", "N/A", 3);
+        let config = mock_formatter_for_tests("F:", "N/A", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![mock_member_content("OriginalName", "VRChatSpecific")];
         assert_eq!(
             format_fronting_status(&config, &fronts),
@@ -259,14 +260,14 @@ mod tests {
 
     #[test]
     fn test_format_vrchat_status_cleans_names() {
-        let config = mock_formatter_for_tests("F:", "N/A", 3);
+        let config = mock_formatter_for_tests("F:", "N/A", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![mock_member_content("User😊Name", "")];
         assert_eq!(format_fronting_status(&config, &fronts), "F: UserName");
     }
 
     #[test]
     fn test_format_vrchat_status_complex_truncation_and_vrc_name() {
-        let config = mock_formatter_for_tests("F:", "N/A", 4);
+        let config = mock_formatter_for_tests("F:", "N/A", 4, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![
             mock_member_content("LongNameOne😊", ""),
             mock_member_content("Shorty", "VRC11"),
@@ -278,6 +279,21 @@ mod tests {
         // Truncated names: Long, VRC1, Anot
         // Truncated string: "F:Long,VRC1,Anot" 17 <= 23
         assert_eq!(format_fronting_status(&config, &fronts), "F:Long,VRC1,Anot");
+    }
+
+    #[test]
+    fn test_format_status_truncation() {
+        let config = mock_formatter_for_tests("F:", "N/A", 4, 10);
+        let fronts = vec![
+            mock_member_content("LongNameOne😊", ""),
+            mock_member_content("Shorty", "VRC11"),
+            mock_member_content("AnotherVeryLong", ""),
+        ];
+        // Cleaned names for status: LongNameOne, VRC11, AnotherVeryLong
+        // Truncated names: Long, VRC1, Anot
+        // Truncated string: "F:Long,VRC1,Anot" 17 > 10
+        // Count: "F: 3#" 5 <= 10
+        assert_eq!(format_fronting_status(&config, &fronts), "F: 3#");
     }
 
     #[test]

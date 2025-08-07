@@ -1,5 +1,3 @@
-/* WORK-IN-PROGRESS */
-
 use crate::{config::Config, fronting_status, simply_plural};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

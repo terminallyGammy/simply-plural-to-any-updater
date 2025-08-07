@@ -69,6 +69,7 @@ fn local_json_config_file_path(operation: &str, cli_args: &CliArgs) -> Result<St
         let project_dir = ProjectDirs::from("org", "sp2any", "sp2any").unwrap();
         project_dir
             .config_dir()
+            .join("sp2any.json")
             .to_str()
             .map(String::from)
             .ok_or_else(|| anyhow!("Path to String conversion failed"))

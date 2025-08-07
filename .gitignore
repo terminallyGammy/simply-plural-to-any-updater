@@ -1,10 +1,11 @@
 # Rust
 target
 
-# Env files
+# Config files
 /*.env
 !*defaults*.env
 !vrcupdater.sample.env
+sp2any.json
 
 # Log files
 *.log

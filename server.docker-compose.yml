@@ -1,18 +1,14 @@
 services:
-  sp2any:
+  sp2any-webserver:
+    container_name: sp2any-webserver
     build:
       dockerfile: server.Dockerfile
-      context: "."
-    image: "sp2any:latest"
-    container_name: sp2any
+      context: .
     env_file:
       - release/config/server.defaults.env
-      - server.env
+    volumes:
+      - ./sp2any.json:/root/.config/sp2any/sp2any.json
+    command: "--webserver --no-gui"
     restart: "on-failure:2"
-    networks:
-      - sp2any-net
-
-networks:
-  sp2any-net:
-    name: sp2any-net
-    driver: bridge
+    network_mode: host
+  

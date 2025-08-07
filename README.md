@@ -2,6 +2,7 @@
 
 Update your [Simply Plural](https://apparyllis.com/) system fronting status automatically to
 * your [VRChat](https://hello.vrchat.com/) status message
+* yout [Discord](https://discord.com) custom status message
 * your website as HTML
 
 ## SimplyPlural to VRChat Status
@@ -17,17 +18,31 @@ a 2FA code, if you hav configured one for your account. Then it'll automatically
 update your status in VRChat priodically from SimplyPlural. The login is saved in a cookie,
 so you won't need to input your 2FA code that often.
 
+## SimplyPlural to Discord
+
+Similarly to above, the fronting status will be reflected in your discord custom status message.
+Since Discord supports emojis and a vast space of unicode characters in the status message (in contrast to VRChat),
+the member names will not be cleaned like they are done so for VRChat. If a preferred status name is configured in Simply Plural,
+then that is used as well.
+
 ## SimplyPlural to Website
 
-When running as a website `--webserver`, it serves an endpoint `/fronting`
+When running as a website via `--webserver`, it serves an endpoint `/fronting`
 and provides a HTML page with the current fronting status (from SimplyPlural)
 as a well-rendered UI.
 
-To run the webserver, simply define a `deploy.env` with the relevant variables and run `restart-services.sh`. It uses a docker compose setup. You can stop services via `stop-services.sh`.
+To run the webserver (Linux only):
+1. Download the binary from the latest release
+2. Populate `sp2any.json` with the relevant variables. Use `release/config/example.json` as guideline for the format and contents.
+3. Run the dockerized setup via `docker compose up -d`.
+
+Now on `http://localhost:8000/fronting` you can GET the fronting status.
+
+Use the the deployment example files as guidelines to your custom deployment setup.
 
 ## FAQ
 
-**Why is my member name not shown correctly?**
+**Why is my member name not shown correctly in VRChat?**
 
 VRChat has limitations on what it allows one to show in the VRChat Status message.
 While most european letters and accents are supported, special things such as emojis are not.
@@ -38,6 +53,9 @@ Furthermore, if a member has a name which cannot be represented at all, e.g. `ðŸ
 custom field in your Simply Plural named `VRChat Status Name` and fill in a VRChat compatible name in that field,
 e.g. `Sparkle Star`. This way you can keep on using the proper name in Simply Plural while also having
 something readable in VRChat.
+
+Further note, that even if your status is updated from this program, the _menu in VRChat won't update for **you** (this is a a bug in VRChat...)_.
+Others will see the new fronting status message - and you can always check the website, that your status message is indeed updated.
 
 ## Migrate from v1 to v2
 

@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::time::Duration;
 
+use crate::generate_with_defaults;
+
 #[derive(Parser, Debug, Clone, Default)]
 #[clap(author, version, about, long_about = None)]
 pub struct CliArgs {
@@ -49,18 +51,19 @@ pub fn default_config() -> LocalJsonConfigV2 {
     }
 }
 
-pub enum LocalConfigV2Field {
-    WaitSeconds,
-    SystemName,
-    SimplyPluralToken,
-    SimplyPluralBaseUrl,
-    DiscordToken,
-    VrchatUsername,
-    VrchatPassword,
-    VrchatCookie,
-    VrchatUpdaterPrefix,
-    VrchatUpdaterNoFronts,
-    VrchatUpdaterTruncateNamesTo,
+generate_with_defaults!{
+    LocalJsonConfigV2,
+    wait_seconds,
+    system_name,
+    simply_plural_token,
+    simply_plural_base_url,
+    discord_token,
+    vrchat_username,
+    vrchat_password,
+    vrchat_updater_prefix,
+    vrchat_updater_no_fronts,
+    vrchat_updater_truncate_names_to,
+    vrchat_cookie,
 }
 
 fn local_json_config_file_path(operation: &str, cli_args: &CliArgs) -> Result<String> {

@@ -8,7 +8,7 @@ use chrono::Utc;
 use serde::Serialize;
 
 pub async fn run_loop(config: &Config) -> Result<()> {
-    eprintln!("Running VRChat Updater ...");
+    eprintln!("Running Updater ...");
 
     let (vrchat_config, user_id) = vrchat_auth::authenticate_vrchat(config).await?;
 

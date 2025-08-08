@@ -11,6 +11,7 @@ use tokio::runtime;
 
 mod config;
 mod config_store;
+mod macros;
 mod discord;
 mod fronting_status;
 mod gui;

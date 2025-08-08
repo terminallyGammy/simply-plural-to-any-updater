@@ -1,9 +1,12 @@
-<script setup lang="ts">
-import Config from './components/Config.vue'
-</script>
-
 <template>
-  <main>
-    <Config />
-  </main>
+  <div id="app">
+    <nav>
+      <router-link to="/">Home</router-link> |
+      <router-link to="/config">Settings</router-link>
+    </nav>
+    <router-view />
+  </div>
 </template>
+
+<script setup lang="ts">
+</script>

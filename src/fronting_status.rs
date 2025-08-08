@@ -221,7 +221,8 @@ mod tests {
     #[test]
     fn test_format_vrchat_status_fits_short_string_not_long() {
         // VRCHAT_MAX_ALLOWED_STATUS_LENGTH is 23
-        let config = mock_formatter_for_tests("Status:", "N/A", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
+        let config =
+            mock_formatter_for_tests("Status:", "N/A", 3, VRCHAT_MAX_ALLOWED_STATUS_LENGTH);
         let fronts = vec![
             mock_member_content("UserOne", ""),
             mock_member_content("UserTwo", ""),

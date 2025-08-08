@@ -113,10 +113,11 @@ That can be manually edited as well as configured via the GUI.
 
 Furthermore, the following is how the GUI should look like:
 * a main page where one can see the various updaters (VRChat and Discord) and their status (Running, Error, Paused, Inactive)
-* a settings page where one can configure these things
+* a settings page where one can configure the local config from config_storage.rs
 
 ### TODO
 
 * Make it such that discord/vrchat sync is enabled specifically and don't have to be both activated at the same time
 * Rename 'VRChat Status Name' field to 'SP2Any Simple Name' field
 * Ask on Reddit and various discord servers for what features the users want
+* Use tauri-spectra to have typesafe communication between tauri typescript and rust.

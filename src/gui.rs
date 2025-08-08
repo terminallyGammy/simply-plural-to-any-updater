@@ -1,18 +1,26 @@
 /* WORK-IN-PROGRESS */
 
 use anyhow::{anyhow, Result};
+use serde::Serialize;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIcon;
 use tauri::{Emitter, Manager, State};
 
 use crate::config::Config;
-use crate::{config_store, updater};
+use crate::config_store;
+use crate::updater;
 
 /* Payload for single instance of the program*/
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, Serialize)]
 struct Payload {
     args: Vec<String>,
     cwd: String,
+}
+
+#[derive(Clone, Serialize)]
+struct UpdaterState {
+    updater: updater::Platform,
+    status: updater::UpdaterStatus,
 }
 
 struct AppState {
@@ -34,6 +42,21 @@ fn set_config(
     config_store::write_local_config_file(&config, &state.cli_args).map_err(|e| e.to_string())
 }
 
+// todo. implement
+#[tauri::command]
+fn get_updaters_state() -> Result<Vec<UpdaterState>, String> {
+    Ok(vec![
+        UpdaterState {
+            updater: updater::Platform::VRChat,
+            status: updater::UpdaterStatus::Running,
+        },
+        UpdaterState {
+            updater: updater::Platform::Discord,
+            status: updater::UpdaterStatus::Inactive,
+        },
+    ])
+}
+
 pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
@@ -45,7 +68,11 @@ pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
         .manage(AppState {
             cli_args: config.cli_args.clone(),
         })
-        .invoke_handler(tauri::generate_handler![get_config, set_config])
+        .invoke_handler(tauri::generate_handler![
+            get_config,
+            set_config,
+            get_updaters_state
+        ])
         .setup(|app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 

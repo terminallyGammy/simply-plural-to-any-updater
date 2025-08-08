@@ -1,8 +1,11 @@
+/* WORK-IN-PROGRESS */
+
 use std::thread;
 
 use crate::{config::Config, discord, simply_plural, vrchat, vrchat_auth};
 use anyhow::{Ok, Result};
 use chrono::Utc;
+use serde::Serialize;
 
 pub async fn run_loop(config: &Config) -> Result<()> {
     eprintln!("Running VRChat Updater ...");
@@ -53,4 +56,19 @@ fn log_error_and_continue(loop_part_name: &str, res: Result<()>) {
             eprintln!("Error in {loop_part_name}. Skipping update. Error: {err}");
         }
     }
+}
+
+#[derive(Clone, Serialize)]
+pub enum Platform {
+    VRChat,
+    Discord,
+}
+
+#[derive(Clone, Serialize)]
+pub enum UpdaterStatus {
+    Inactive,
+    Paused,
+    Running,
+    Error,
+    Unknown,
 }

@@ -9,7 +9,7 @@ Only do the tasks described in the following sections if explicitly requested to
   * Good: `use anyhow::{anyhow, Error, Result}`
   * Bad: the above imports on separate lines/statements for each imported object
 * Rust import statements should use separate lines for imports from different modules originating from this project.
-* After made all changes, run a final `./release/lint.sh` and summarise the changes to make.
+* After you made all changes, run a final `./release/lint.sh` and summarise the changes to make.
   * Warnings or errors are only allowed for files which have a `WORK-IN-PROGRESS` marker at the top.
 
 

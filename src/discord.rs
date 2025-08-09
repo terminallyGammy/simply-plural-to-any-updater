@@ -17,7 +17,7 @@ impl DiscordUpdater {
     pub const fn new(_platform: Platform) -> Self {
         Self {}
     }
-    
+
     #[allow(clippy::unused_async)]
     pub async fn setup(&self, _config: &Config) -> Result<()> {
         Ok(())
@@ -51,8 +51,10 @@ async fn update_to_discord(config: &Config, fronts: &[simply_plural::Fronter]) -
 async fn set_discord_status(config: &Config, status_string: String) -> Result<()> {
     eprintln!("Setting Discord Status: {status_string}");
 
-    // todo. make into separate config value
-    let discord_status_url = "https://discord.com/api/v10/users/@me/settings";
+    let discord_status_url = format!(
+        "{}{}",
+        config.discord_base_url, "/api/v10/users/@me/settings"
+    );
 
     let body = User {
         custom_status: Status {

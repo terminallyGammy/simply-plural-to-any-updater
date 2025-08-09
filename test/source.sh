@@ -8,8 +8,8 @@ export SECONDS_BETWEEN_UPDATES=10
 write_env_vars_to_config_json() {
     echo "{
         \"simply_plural_token\": \"${SPS_API_TOKEN-null}\",
-        \"enable_discord\": true,
-        \"enable_vrchat\": true,
+        \"enable_discord\": ${ENABLE_DISCORD-true},
+        \"enable_vrchat\": ${ENABLE_VRCHAT-true},
         \"discord_token\": \"${DISCORD_TOKEN-null}\",
         \"vrchat_username\": \"${VRCHAT_USERNAME-null}\",
         \"vrchat_password\": \"${VRCHAT_PASSWORD-null}\",

@@ -117,7 +117,7 @@ Furthermore, the following is how the GUI should look like:
 
 ### TODO
 
-* Make it such that discord/vrchat sync is enabled specifically and don't have to be both activated at the same time
+* Test that discord and vrchat updater work independently of each other
 * Rename 'VRChat Status Name' field to 'SP2Any Simple Name' field
 * Ask on Reddit and various discord servers for what features the users want
 * Use tauri-spectra to have typesafe communication between tauri typescript and rust.

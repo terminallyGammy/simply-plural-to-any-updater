@@ -8,6 +8,7 @@
   "simply_plural_base_url": "https://api.apparyllis.com/v1",
   "enable_discord": false,
   "enable_vrchat": false,
+  "discord_base_url": "https://discord.com",
   "discord_token": "discord token",
   "vrchat_username": "vrchat username",
   "vrchat_password": "vrchat password",

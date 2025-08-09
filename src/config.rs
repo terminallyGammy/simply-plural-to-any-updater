@@ -18,6 +18,7 @@ pub struct Config {
     pub enable_discord: bool,
     pub enable_vrchat: bool,
     pub discord_token: String,
+    pub discord_base_url: String,
     pub vrchat_username: String,
     pub vrchat_password: String,
     pub vrchat_updater_prefix: String,
@@ -38,6 +39,10 @@ pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
         .with_option_defaults(config_store::default_config());
 
     let platform_updater_mode = !cli_args.webserver;
+    let enable_discord =
+        platform_updater_mode && config_value!(local_config_with_defaults, enable_discord)?;
+    let enable_vrchat =
+        platform_updater_mode && config_value!(local_config_with_defaults, enable_vrchat)?;
 
     let config = Config {
         client,
@@ -45,20 +50,21 @@ pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
         system_name: config_value_if!(cli_args.webserver, local_config_with_defaults, system_name)?,
         simply_plural_token: config_value!(local_config_with_defaults, simply_plural_token)?,
         simply_plural_base_url: config_value!(local_config_with_defaults, simply_plural_base_url)?,
-        enable_discord: config_value!(local_config_with_defaults, enable_discord)?,
-        enable_vrchat: config_value!(local_config_with_defaults, enable_vrchat)?,
-        discord_token: config_value_if!(
-            platform_updater_mode,
+        enable_discord,
+        enable_vrchat,
+        discord_base_url: config_value_if!(
+            enable_discord,
             local_config_with_defaults,
-            discord_token
+            discord_base_url
         )?,
+        discord_token: config_value_if!(enable_discord, local_config_with_defaults, discord_token)?,
         vrchat_username: config_value_if!(
-            platform_updater_mode,
+            enable_vrchat,
             local_config_with_defaults,
             vrchat_username
         )?,
         vrchat_password: config_value_if!(
-            platform_updater_mode,
+            enable_vrchat,
             local_config_with_defaults,
             vrchat_password
         )?,

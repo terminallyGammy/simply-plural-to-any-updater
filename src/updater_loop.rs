@@ -1,14 +1,17 @@
-use std::thread;
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
 
 use crate::{
     config::Config,
     simply_plural::{self},
-    updater::{Platform, Updater},
+    updater::{Platform, Updater, UpdaterState},
 };
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use chrono::Utc;
 
-pub async fn run_loop(config: &Config) {
+pub async fn run_loop(config: &Config, updater_state: Arc<Mutex<Vec<UpdaterState>>>) {
     eprintln!("Running Updater ...");
 
     let mut updaters = vec![
@@ -22,6 +25,8 @@ pub async fn run_loop(config: &Config) {
         }
     }
 
+    write_updaters_state_to_arc(config, &updater_state, &updaters);
+
     loop {
         eprintln!(
             "\n\n======================= UTC {}",
@@ -33,12 +38,28 @@ pub async fn run_loop(config: &Config) {
             loop_logic(config, updaters.as_mut_slice()).await,
         );
 
+        write_updaters_state_to_arc(config, &updater_state, &updaters);
+
         eprintln!(
             "Waiting {}s for next update trigger...",
             config.wait_seconds.as_secs()
         );
 
         thread::sleep(config.wait_seconds);
+    }
+}
+
+fn write_updaters_state_to_arc(
+    config: &Config,
+    updater_state: &Arc<Mutex<Vec<UpdaterState>>>,
+    updaters: &[Updater],
+) {
+    let new_state: Vec<UpdaterState> = updaters.iter().map(|u| u.state(config)).collect();
+    match updater_state.try_lock() {
+        Err(err) => eprintln!("Error: Failed to lock updater state mutex: {err}"),
+        Ok(mut state) => {
+            *state = new_state;
+        }
     }
 }
 

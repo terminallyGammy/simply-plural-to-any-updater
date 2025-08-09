@@ -2,30 +2,27 @@
 
 use anyhow::{anyhow, Result};
 use serde::Serialize;
+use std::sync::{Arc, Mutex};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIcon;
 use tauri::{Emitter, Manager, State};
 
 use crate::config::Config;
+use crate::config_store;
+use crate::updater::UpdaterState;
 use crate::updater_loop;
 use crate::CliArgs;
-use crate::{config_store, updater};
 
 /* Payload for single instance of the program*/
 #[derive(Clone, Serialize)]
-struct Payload {
+struct SingleInstancePayload {
     args: Vec<String>,
     cwd: String,
 }
 
-#[derive(Clone, Serialize)]
-struct UpdaterState {
-    updater: updater::Platform,
-    status: updater::UpdaterStatus,
-}
-
 struct AppState {
     cli_args: CliArgs,
+    updater_state: Arc<Mutex<Vec<UpdaterState>>>,
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -43,41 +40,46 @@ fn set_config(
     config_store::write_local_config_file(&config, &state.cli_args).map_err(|e| e.to_string())
 }
 
-// todo. implement
 #[tauri::command]
-fn get_updaters_state() -> Result<Vec<UpdaterState>, String> {
-    Ok(vec![
-        UpdaterState {
-            updater: updater::Platform::VRChat,
-            status: updater::UpdaterStatus::Running,
-        },
-        UpdaterState {
-            updater: updater::Platform::Discord,
-            status: updater::UpdaterStatus::Error(String::from("some error")),
-        },
-    ])
+#[allow(clippy::needless_pass_by_value)]
+fn get_updaters_state(state: State<AppState>) -> Result<Vec<UpdaterState>, String> {
+    state
+        .updater_state
+        .try_lock()
+        .map_err(|e| e.to_string())
+        .map(|d| d.clone())
 }
 
-pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
+pub fn run_tauri_gui(
+    config: Config,
+    updater_state: Arc<Mutex<Vec<UpdaterState>>>,
+) -> Result<(), anyhow::Error> {
+    let app_state = AppState {
+        cli_args: config.cli_args.clone(),
+        updater_state,
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             eprintln!("{}, {argv:?}, {cwd}", app.package_info().name);
-            app.emit("single-instance", Payload { args: argv, cwd })
+            app.emit("single-instance", SingleInstancePayload { args: argv, cwd })
                 .unwrap();
         }))
-        .manage(AppState {
-            cli_args: config.cli_args.clone(),
-        })
+        .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             get_config,
             set_config,
             get_updaters_state
         ])
-        .setup(|app| {
+        .setup(move |app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 
-            tauri::async_runtime::spawn(async move { updater_loop::run_loop(&config).await });
+            let shared_updater_state = app.handle().state::<AppState>().updater_state.clone();
+
+            tauri::async_runtime::spawn(async move {
+                updater_loop::run_loop(&config, shared_updater_state).await;
+            });
 
             tauri_system_tray_handler(app)?;
 

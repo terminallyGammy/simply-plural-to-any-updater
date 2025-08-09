@@ -28,8 +28,6 @@ pub struct Config {
 }
 
 pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
-    let client = Client::builder().cookie_store(true).build()?;
-
     eprintln!("Loading config ...");
 
     // This will run the Updater specific setup if not in webserver mode.
@@ -37,6 +35,12 @@ pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
 
     let local_config_with_defaults = config_store::read_local_config_file(cli_args)?
         .with_option_defaults(config_store::default_config());
+
+    let request_timeout = config_value!(local_config_with_defaults, request_timeout)?;
+    let client = Client::builder()
+        .cookie_store(true)
+        .timeout(request_timeout)
+        .build()?;
 
     let platform_updater_mode = !cli_args.webserver;
     let enable_discord =

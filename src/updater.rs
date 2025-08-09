@@ -20,6 +20,12 @@ pub enum UpdaterStatus {
     Unknown,
 }
 
+#[derive(Clone, Serialize)]
+pub struct UpdaterState {
+    pub updater: Platform,
+    pub status: UpdaterStatus,
+}
+
 pub enum Updater {
     VRChat(Box<VRChatUpdater>),
     Discord(DiscordUpdater),
@@ -46,6 +52,13 @@ impl Updater {
                 .map_or(UpdaterStatus::Running, |e| UpdaterStatus::Error(e.clone()))
         } else {
             UpdaterStatus::Inactive
+        }
+    }
+
+    pub fn state(&self, config: &Config) -> UpdaterState {
+        UpdaterState {
+            updater: self.platform(),
+            status: self.status(config),
         }
     }
 

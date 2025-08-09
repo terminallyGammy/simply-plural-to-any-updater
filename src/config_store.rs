@@ -12,6 +12,7 @@ pub struct LocalJsonConfigV2 {
     // None: Use default value from github, if available
     // Some(x): Use this value
     pub wait_seconds: Option<Duration>,
+    pub request_timeout: Option<Duration>,
     pub system_name: Option<String>,
     pub simply_plural_token: Option<String>,
     pub simply_plural_base_url: Option<String>,
@@ -35,6 +36,7 @@ pub fn default_config() -> LocalJsonConfigV2 {
         discord_base_url: Some(String::from("https://discord.com")),
         simply_plural_base_url: Some(String::from("https://api.apparyllis.com/v1")),
         wait_seconds: Some(Duration::from_secs(60)),
+        request_timeout: Some(Duration::from_secs(5)),
         enable_discord: Some(false),
         enable_vrchat: Some(false),
         ..Default::default()

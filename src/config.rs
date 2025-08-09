@@ -1,8 +1,8 @@
-use anyhow::{anyhow,Result};
+use anyhow::{anyhow, Result};
 use reqwest::Client;
 use std::time::Duration;
 
-use crate::{config_store::{self, CliArgs}};
+use crate::config_store::{self, CliArgs};
 use crate::{value_of, value_of_if};
 
 #[derive(Debug, Clone, Default)]
@@ -38,23 +38,41 @@ pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
 
     let config = Config {
         client,
-        wait_seconds: value_of!(local_config_with_defaults,wait_seconds)?,
+        wait_seconds: value_of!(local_config_with_defaults, wait_seconds)?,
         system_name: value_of_if!(cli_args.webserver, local_config_with_defaults, system_name)?,
         simply_plural_token: value_of!(local_config_with_defaults, simply_plural_token)?,
         simply_plural_base_url: value_of!(local_config_with_defaults, simply_plural_base_url)?,
-        discord_token: value_of_if!(platform_updater_mode, local_config_with_defaults, discord_token)?,
-        vrchat_username: value_of_if!(platform_updater_mode, local_config_with_defaults, vrchat_username)?,
-        vrchat_password: value_of_if!(platform_updater_mode, local_config_with_defaults, vrchat_password)?,
+        discord_token: value_of_if!(
+            platform_updater_mode,
+            local_config_with_defaults,
+            discord_token
+        )?,
+        vrchat_username: value_of_if!(
+            platform_updater_mode,
+            local_config_with_defaults,
+            vrchat_username
+        )?,
+        vrchat_password: value_of_if!(
+            platform_updater_mode,
+            local_config_with_defaults,
+            vrchat_password
+        )?,
         vrchat_updater_prefix: value_of!(local_config_with_defaults, vrchat_updater_prefix)?,
         vrchat_updater_no_fronts: value_of!(local_config_with_defaults, vrchat_updater_no_fronts)?,
-        vrchat_updater_truncate_names_to: value_of!(local_config_with_defaults, vrchat_updater_truncate_names_to)?,
+        vrchat_updater_truncate_names_to: value_of!(
+            local_config_with_defaults,
+            vrchat_updater_truncate_names_to
+        )?,
         vrchat_cookie: value_of!(local_config_with_defaults, vrchat_cookie)
-            .inspect(|_|eprintln!("A VRChat cookie was found and will be used."))
+            .inspect(|_| eprintln!("A VRChat cookie was found and will be used."))
             .unwrap_or(String::new()),
         cli_args: cli_args.clone(),
     };
 
-    eprintln!("Credentials loaded. VRChat Username is '{}'", config.vrchat_username);
+    eprintln!(
+        "Credentials loaded. VRChat Username is '{}'",
+        config.vrchat_username
+    );
 
     Ok(config)
 }

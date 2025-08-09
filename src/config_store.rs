@@ -51,7 +51,7 @@ pub fn default_config() -> LocalJsonConfigV2 {
     }
 }
 
-generate_with_defaults!{
+generate_with_defaults! {
     LocalJsonConfigV2,
     wait_seconds,
     system_name,

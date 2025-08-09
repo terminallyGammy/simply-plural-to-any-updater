@@ -70,7 +70,7 @@ jobs:
       if: steps.changed.outputs.changes == 'true'
       uses: peter-evans/create-pull-request@v7
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.DEPLOY_PR_TOKEN }}
         commit-message: "chore(deps): update dependencies"
         title: "Update Dependencies"
         body: "This PR updates the project dependencies."

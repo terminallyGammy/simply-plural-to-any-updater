@@ -1,4 +1,4 @@
-use crate::{config::Config, fronting_status, simply_plural};
+use crate::{config::Config, fronting_status, simply_plural, updater::Platform};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +12,27 @@ struct Status {
     text: String,
 }
 
-pub async fn update_to_discord(config: &Config, fronts: &[simply_plural::Fronter]) -> Result<()> {
+pub struct DiscordUpdater;
+impl DiscordUpdater {
+    pub const fn new(_platform: Platform) -> Self {
+        Self {}
+    }
+    
+    #[allow(clippy::unused_async)]
+    pub async fn setup(&self, _config: &Config) -> Result<()> {
+        Ok(())
+    }
+
+    pub async fn update_fronting_status(
+        &self,
+        config: &Config,
+        fronts: &[simply_plural::Fronter],
+    ) -> Result<()> {
+        update_to_discord(config, fronts).await
+    }
+}
+
+async fn update_to_discord(config: &Config, fronts: &[simply_plural::Fronter]) -> Result<()> {
     let fronting_format = fronting_status::FrontingFormat {
         max_length: Some(fronting_status::DISCORD_STATUS_MAX_LENGTH),
         cleaning: fronting_status::CleanForPlatform::NoClean,

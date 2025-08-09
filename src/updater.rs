@@ -1,74 +1,67 @@
-/* WORK-IN-PROGRESS */
-
-use std::thread;
-
-use crate::{config::Config, discord, simply_plural, vrchat, vrchat_auth};
-use anyhow::{Ok, Result};
-use chrono::Utc;
+use anyhow::Result;
 use serde::Serialize;
 
-pub async fn run_loop(config: &Config) -> Result<()> {
-    eprintln!("Running Updater ...");
+use crate::{
+    config::Config, discord::DiscordUpdater, simply_plural::Fronter, vrchat::VRChatUpdater,
+};
 
-    let (vrchat_config, user_id) = vrchat_auth::authenticate_vrchat(config).await?;
-
-    loop {
-        eprintln!(
-            "\n\n======================= UTC {}",
-            Utc::now().format("%Y-%m-%d %H:%M:%S")
-        );
-
-        log_error_and_continue(
-            "Updater Logic",
-            loop_logic(config, &vrchat_config, &user_id).await,
-        );
-
-        eprintln!(
-            "Waiting {}s for next update trigger...",
-            config.wait_seconds.as_secs()
-        );
-
-        thread::sleep(config.wait_seconds);
-    }
-}
-
-async fn loop_logic(
-    config: &Config,
-    vrchat_config: &vrchatapi::apis::configuration::Configuration,
-    user_id: &str,
-) -> Result<()> {
-    let fronts = simply_plural::fetch_fronts(config).await?;
-
-    log_error_and_continue(
-        "VRChat",
-        vrchat::update_to_vrchat(config, vrchat_config, &fronts, user_id).await,
-    );
-
-    log_error_and_continue("Discord", discord::update_to_discord(config, &fronts).await);
-
-    Ok(())
-}
-
-fn log_error_and_continue(loop_part_name: &str, res: Result<()>) {
-    match res {
-        core::result::Result::Ok(()) => {}
-        Err(err) => {
-            eprintln!("Error in {loop_part_name}. Skipping update. Error: {err}");
-        }
-    }
-}
-
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, strum_macros::Display)]
 pub enum Platform {
     VRChat,
     Discord,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, strum_macros::Display)]
 pub enum UpdaterStatus {
     Inactive,
-    Paused,
+    // Paused,
     Running,
-    Error,
-    Unknown,
+    // Error,
+    // Unknown,
+}
+
+pub enum Updater {
+    VRChat(Box<VRChatUpdater>),
+    Discord(DiscordUpdater),
+}
+
+impl Updater {
+    pub fn new(platform: Platform) -> Self {
+        match platform {
+            Platform::VRChat => Self::VRChat(Box::new(VRChatUpdater::new(platform))),
+            Platform::Discord => Self::Discord(DiscordUpdater::new(platform)),
+        }
+    }
+
+    pub const fn platform(&self) -> Platform {
+        match self {
+            Self::VRChat(_) => Platform::VRChat,
+            Self::Discord(_) => Platform::Discord,
+        }
+    }
+
+    pub const fn enabled(&self, config: &Config) -> bool {
+        match self {
+            Self::VRChat(_) => config.enable_vrchat,
+            Self::Discord(_) => config.enable_discord,
+        }
+    }
+
+    pub async fn setup(&mut self, config: &Config) -> Result<()> {
+        match self {
+            Self::VRChat(updater) => updater.setup(config).await,
+            Self::Discord(updater) => updater.setup(config).await,
+        }
+    }
+
+    pub async fn update_fronting_status(
+        &mut self,
+        config: &Config,
+        fronts: &[Fronter],
+    ) -> Result<()> {
+        match self {
+            Self::VRChat(updater) => updater.update_fronting_status(config, fronts).await,
+            Self::Discord(updater) => updater.update_fronting_status(config, fronts).await,
+        }
+    }
 }

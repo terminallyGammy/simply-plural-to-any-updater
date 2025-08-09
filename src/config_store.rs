@@ -1,27 +1,11 @@
 use anyhow::{anyhow, Result};
-use clap::Parser;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::time::Duration;
 
+use crate::CliArgs;
 use sp2any_macros::WithOptionDefaults;
-
-#[derive(Parser, Debug, Clone, Default)]
-#[clap(author, version, about, long_about = None)]
-pub struct CliArgs {
-    /// Run without the graphical user interface
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
-    pub no_gui: bool,
-
-    // Run in webserver mode. Implies no_gui.
-    #[arg(short, long, action = clap::ArgAction::SetTrue)]
-    pub webserver: bool,
-
-    // Path to local json config file, if not default
-    #[arg(short, long, default_value_t = String::new())]
-    pub config: String,
-}
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, WithOptionDefaults)]
 pub struct LocalJsonConfigV2 {
@@ -31,6 +15,8 @@ pub struct LocalJsonConfigV2 {
     pub system_name: Option<String>,
     pub simply_plural_token: Option<String>,
     pub simply_plural_base_url: Option<String>,
+    pub enable_discord: Option<bool>,
+    pub enable_vrchat: Option<bool>,
     pub discord_token: Option<String>,
     pub vrchat_username: Option<String>,
     pub vrchat_password: Option<String>,
@@ -47,6 +33,8 @@ pub fn default_config() -> LocalJsonConfigV2 {
         vrchat_updater_truncate_names_to: Some(3),
         simply_plural_base_url: Some(String::from("https://api.apparyllis.com/v1")),
         wait_seconds: Some(Duration::from_secs(60)),
+        enable_discord: Some(false),
+        enable_vrchat: Some(false),
         ..Default::default()
     }
 }

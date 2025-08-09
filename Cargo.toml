@@ -27,6 +27,7 @@ log = "0.4"
 clap = { version = "4", features = [ "derive"] }
 directories = "6"
 tauri-plugin-single-instance = "2"
+strum_macros = "0.27"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

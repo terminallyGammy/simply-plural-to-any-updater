@@ -17,12 +17,13 @@ mod gui;
 mod macros;
 mod simply_plural;
 mod updater;
+mod updater_loop;
 mod vrchat;
 mod vrchat_auth;
 mod webserver;
 
 fn main() -> Result<()> {
-    let cli_args = config_store::CliArgs::parse();
+    let cli_args = CliArgs::parse();
 
     let config = config::setup_and_load_config(&cli_args)?;
 
@@ -31,7 +32,7 @@ fn main() -> Result<()> {
         run_async_blocking(webserver::run_server(config))?;
     } else if cli_args.no_gui {
         eprintln!("Running SP2Any Updater in console mode ...");
-        run_async_blocking(updater::run_loop(&config))?;
+        run_async_blocking(updater_loop::run_loop(&config))?;
     } else {
         eprintln!("Starting SP2Any Updater in GUI mode ...");
         gui::run_tauri_gui(config)?;
@@ -43,4 +44,20 @@ fn main() -> Result<()> {
 fn run_async_blocking<T>(f: impl Future<Output = Result<T>>) -> Result<T> {
     let rt = runtime::Runtime::new()?;
     rt.block_on(f)
+}
+
+#[derive(Parser, Debug, Clone, Default)]
+#[clap(author, version, about, long_about = None)]
+pub struct CliArgs {
+    /// Run without the graphical user interface
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    pub no_gui: bool,
+
+    // Run in webserver mode. Implies no_gui.
+    #[arg(short, long, action = clap::ArgAction::SetTrue)]
+    pub webserver: bool,
+
+    // Path to local json config file, if not default
+    #[arg(short, long, default_value_t = String::new())]
+    pub config: String,
 }

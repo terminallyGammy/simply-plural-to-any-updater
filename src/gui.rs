@@ -7,8 +7,9 @@ use tauri::tray::TrayIcon;
 use tauri::{Emitter, Manager, State};
 
 use crate::config::Config;
-use crate::config_store;
-use crate::updater;
+use crate::updater_loop;
+use crate::CliArgs;
+use crate::{config_store, updater};
 
 /* Payload for single instance of the program*/
 #[derive(Clone, Serialize)]
@@ -24,7 +25,7 @@ struct UpdaterState {
 }
 
 struct AppState {
-    cli_args: config_store::CliArgs,
+    cli_args: CliArgs,
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -76,7 +77,7 @@ pub fn run_tauri_gui(config: Config) -> Result<(), anyhow::Error> {
         .setup(|app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 
-            tauri::async_runtime::spawn(async move { updater::run_loop(&config).await });
+            tauri::async_runtime::spawn(async move { updater_loop::run_loop(&config).await });
 
             tauri_system_tray_handler(app)?;
 

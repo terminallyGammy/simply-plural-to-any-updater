@@ -67,7 +67,7 @@ runs:
         SPS_API_WRITE_TOKEN: ${{ inputs.SPS_API_WRITE_TOKEN }}
       run: ./test/webserver.integration-tests.sh
 
-    - name: VRC Updater Integration Tests
+    - name: Updater Integration Tests
       shell: bash
       if: ${{ inputs.SKIP_TESTS }} == 'false'
       env:

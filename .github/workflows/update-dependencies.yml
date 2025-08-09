@@ -1,0 +1,62 @@
+name: Update Dependencies
+
+on:
+  schedule:
+    - cron: "9 5 * * 2" # Runs every tuesday at 05:09
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup
+      uses: ./.github/actions/1-setup
+
+    - name: Update Rust dependencies
+      run: |
+        cargo update
+
+    - name: Update Node dependencies
+      run: |
+        cd frontend
+        npm install -g npm-check-updates
+        ncu -u
+        npm install
+        cd ..
+
+    - name: Commit changes
+      id: commit
+      run: |
+        echo "CURRENT_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+        git add .
+        if git diff --staged --quiet; then
+          echo "changes=false" >> $GITHUB_OUTPUT
+        else
+          git commit -m "chore: update dependencies"
+          echo "changes=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run Tests
+      uses: ./.github/actions/2-build-test-lint
+      if: steps.commit.outputs.changes == 'true'
+      with:
+        SPS_API_TOKEN: ${{ secrets.SPS_API_TOKEN }}
+        SPS_API_WRITE_TOKEN: ${{ secrets.SPS_API_WRITE_TOKEN }}
+        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        VRCHAT_USERNAME: ${{ secrets.VRCHAT_USERNAME }}
+        VRCHAT_PASSWORD: ${{ secrets.VRCHAT_PASSWORD }}
+        VRCHAT_COOKIE: ${{ secrets.VRCHAT_COOKIE }}
+
+    - name: Create Pull Request
+      if: steps.commit.outputs.changes == 'true'
+      uses: peter-evans/create-pull-request@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "chore(deps): update dependencies"
+        title: "Update Dependencies"
+        body: "This PR updates the project dependencies."
+        branch: dependencies/update-${{ env.CURRENT_DATE }}
+        base: main

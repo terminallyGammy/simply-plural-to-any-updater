@@ -6,7 +6,6 @@ extern crate rocket;
 
 use anyhow::Result;
 use clap::Parser;
-use std::future::Future;
 use tokio::runtime;
 
 mod config;
@@ -29,10 +28,10 @@ fn main() -> Result<()> {
 
     if cli_args.webserver {
         eprintln!("Running in Webserver mode ...");
-        run_async_blocking(webserver::run_server(config))?;
+        run_async_blocking!(webserver::run_server(config))?;
     } else if cli_args.no_gui {
         eprintln!("Running SP2Any Updater in console mode ...");
-        run_async_blocking(updater_loop::run_loop(&config))?;
+        run_async_blocking!(updater_loop::run_loop(&config));
     } else {
         eprintln!("Starting SP2Any Updater in GUI mode ...");
         gui::run_tauri_gui(config)?;
@@ -41,10 +40,6 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_async_blocking<T>(f: impl Future<Output = Result<T>>) -> Result<T> {
-    let rt = runtime::Runtime::new()?;
-    rt.block_on(f)
-}
 
 #[derive(Parser, Debug, Clone, Default)]
 #[clap(author, version, about, long_about = None)]

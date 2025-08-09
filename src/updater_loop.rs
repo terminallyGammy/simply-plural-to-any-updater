@@ -8,7 +8,7 @@ use crate::{
 use anyhow::{Ok, Result};
 use chrono::Utc;
 
-pub async fn run_loop(config: &Config) -> Result<()> {
+pub async fn run_loop(config: &Config) {
     eprintln!("Running Updater ...");
 
     let mut updaters = vec![
@@ -18,7 +18,10 @@ pub async fn run_loop(config: &Config) -> Result<()> {
 
     for u in updaters.as_mut_slice() {
         if u.enabled(config) {
-            u.setup(config).await?;
+            log_error_and_continue(
+                &u.platform().to_string(), 
+                u.setup(config).await
+            );
         }
     }
 
@@ -61,7 +64,7 @@ fn log_error_and_continue(loop_part_name: &str, res: Result<()>) {
     match res {
         core::result::Result::Ok(()) => {}
         Err(err) => {
-            eprintln!("Error in {loop_part_name}. Skipping update. Error: {err}");
+            eprintln!("Error in {loop_part_name}. Skipping. Error: {err}");
         }
     }
 }

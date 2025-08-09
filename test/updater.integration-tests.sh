@@ -14,6 +14,10 @@ set -euo pipefail
 
 [[ "$DISCORD_TOKEN" != "" ]]
 
+FUNCTIONAL_DISCORD_TOKEN="$DISCORD_TOKEN"
+FUNCTIONAL_VRCHAT_USERNAME="$VRCHAT_USERNAME"
+FUNCTIONAL_SPS_API_TOKEN="$SPS_API_TOKEN"
+
 ENABLE_DISCORD=true
 ENABLE_VRCHAT=true
 
@@ -22,7 +26,6 @@ source ./test/plural_system_to_test.sh
 
 main() {
     stop_updater
-
     ./release/cargo-build.sh
 
 
@@ -37,25 +40,37 @@ main() {
     stop_updater
     setup_sp_rest_failure
     start_updater
-    check_updater_failure_and_loop_continues
+    check_updater_failure
+    check_updater_loop_continues
+    reset_changed_variables
 
 
     stop_updater
     setup_vrchat_only
     start_updater
     check_updater_has_no_errors
+    check_updater_loop_continues
+    reset_changed_variables
 
 
     stop_updater
     setup_discord_only
     start_updater
     check_updater_has_no_errors
+    check_updater_loop_continues
+    reset_changed_variables
 
 
     stop_updater
+    setup_vrchat_misconfigured
+    start_updater
+    check_updater_failure
+    check_updater_loop_continues
+    reset_changed_variables
 
+
+    stop_updater
     clear_all_fronts
-
     echo "✅✅✅ Updater Integration Test ✅✅✅"
 }
 
@@ -106,43 +121,47 @@ check_discord_status_string_equals() {
     [[ "$STATUS" == "$EXPECTED" ]]
 }
 
-
-setup_sp_rest_failure() {
-    FUNCTIONAL_SPS_API_TOKEN="$SPS_API_TOKEN"
-    SPS_API_TOKEN="invalid"
+check_updater_has_no_errors() {
+    [[ "$( grep "Error" .log | wc -l )" == "0" ]]
 }
 
-check_updater_failure_and_loop_continues() {
-    SPS_API_TOKEN="$FUNCTIONAL_SPS_API_TOKEN"
-    grep -q "Error: " .log
+check_updater_loop_continues() {
     grep -q "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..." .log
 }
 
+check_updater_failure() {
+    grep -q "Error" .log
+}
+
+
+
+setup_sp_rest_failure() {
+    SPS_API_TOKEN="invalid"
+}
 
 setup_vrchat_only() {
-    FUNCTIONAL_DISCORD_TOKEN="$DISCORD_TOKEN"
-    FUNCTIONAL_VRCHAT_USERNAME="$VRCHAT_USERNAME"
     DISCORD_TOKEN="invalid"
     ENABLE_DISCORD=false
 }
 
 setup_discord_only() {
-    FUNCTIONAL_DISCORD_TOKEN="$DISCORD_TOKEN"
-    FUNCTIONAL_VRCHAT_USERNAME="$VRCHAT_USERNAME"
     VRCHAT_USERNAME="invalid"
     ENABLE_VRCHAT=false
 }
 
-
-check_updater_has_no_errors() {
-    DISCORD_TOKEN="$FUNCTIONAL_DISCORD_TOKEN"
-    VRCHAT_USERNAME="$FUNCTIONAL_VRCHAT_USERNAME"
-    ENABLE_DISCORD=true
-    ENABLE_VRCHAT=true
-    [[ "$( grep "Error: " .log | wc -l )" == "0" ]]
-    grep -q "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..." .log
+setup_vrchat_misconfigured() {
+    VRCHAT_USERNAME="invalid"
+    # VRCHAT enabled!
 }
 
+
+reset_changed_variables() {
+    DISCORD_TOKEN="$FUNCTIONAL_DISCORD_TOKEN"
+    VRCHAT_USERNAME="$FUNCTIONAL_VRCHAT_USERNAME"
+    SPS_API_TOKEN="$FUNCTIONAL_SPS_API_TOKEN"
+    ENABLE_DISCORD=true
+    ENABLE_VRCHAT=true
+}
 
 
 start_updater() {

@@ -1,5 +1,4 @@
 // For config values
-
 #[macro_export]
 macro_rules! config_value {
     ($config:expr, $field:ident) => {
@@ -20,5 +19,13 @@ macro_rules! config_value_if {
         } else {
             Ok(Default::default())
         }
+    };
+}
+
+// For Future Runtime
+#[macro_export]
+macro_rules! run_async_blocking {
+    ($future:expr) => {
+        runtime::Runtime::new()?.block_on($future)
     };
 }

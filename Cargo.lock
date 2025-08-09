@@ -4561,12 +4561,21 @@ dependencies = [
  "rocket",
  "serde",
  "serde_json",
+ "sp2any_macros",
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
  "tauri-plugin-single-instance",
  "tokio",
  "vrchatapi",
+]
+
+[[package]]
+name = "sp2any_macros"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 2.0.104",
 ]
 
 [[package]]

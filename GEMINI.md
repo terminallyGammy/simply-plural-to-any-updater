@@ -16,5 +16,6 @@ Only do the tasks described in the following sections if explicitly requested to
 ## Update Dependencies
 Run:
 * `cargo update`
+* cargo update for the sp2any_macros crate
 * download `npm-check-updates` and run it over the npm packages in `frontend`
 Then commit the changes and request to push them onto a new branch `dependencies/update-YYYY-MM-DD--hh-mm` where the date format variables are accordingly used.

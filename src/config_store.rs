@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::time::Duration;
 
-use crate::generate_with_defaults;
+use sp2any_macros::WithOptionDefaults;
 
 #[derive(Parser, Debug, Clone, Default)]
 #[clap(author, version, about, long_about = None)]
@@ -23,7 +23,7 @@ pub struct CliArgs {
     pub config: String,
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, WithOptionDefaults)]
 pub struct LocalJsonConfigV2 {
     // None: Use default value from github, if available
     // Some(x): Use this value
@@ -49,21 +49,6 @@ pub fn default_config() -> LocalJsonConfigV2 {
         wait_seconds: Some(Duration::from_secs(60)),
         ..Default::default()
     }
-}
-
-generate_with_defaults! {
-    LocalJsonConfigV2,
-    wait_seconds,
-    system_name,
-    simply_plural_token,
-    simply_plural_base_url,
-    discord_token,
-    vrchat_username,
-    vrchat_password,
-    vrchat_updater_prefix,
-    vrchat_updater_no_fronts,
-    vrchat_updater_truncate_names_to,
-    vrchat_cookie,
 }
 
 fn local_json_config_file_path(operation: &str, cli_args: &CliArgs) -> Result<String> {

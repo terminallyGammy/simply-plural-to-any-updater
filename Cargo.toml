@@ -9,6 +9,7 @@ name = "sp2any"
 path = "src/main.rs"
 
 [dependencies]
+sp2any_macros = { path = "sp2any_macros" }
 chrono = "0.4"
 rocket = "0.5"
 anyhow = "1"

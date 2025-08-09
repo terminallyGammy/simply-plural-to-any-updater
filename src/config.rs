@@ -3,7 +3,7 @@ use reqwest::Client;
 use std::time::Duration;
 
 use crate::config_store::{self, CliArgs};
-use crate::{value_of, value_of_if};
+use crate::{config_value, config_value_if};
 
 #[derive(Debug, Clone, Default)]
 pub struct Config {
@@ -32,38 +32,41 @@ pub fn setup_and_load_config(cli_args: &CliArgs) -> Result<Config> {
     initialize_environment_for_updater(cli_args)?;
 
     let local_config_with_defaults = config_store::read_local_config_file(cli_args)?
-        .with_defaults(config_store::default_config());
+        .with_option_defaults(config_store::default_config());
 
     let platform_updater_mode = !cli_args.webserver;
 
     let config = Config {
         client,
-        wait_seconds: value_of!(local_config_with_defaults, wait_seconds)?,
-        system_name: value_of_if!(cli_args.webserver, local_config_with_defaults, system_name)?,
-        simply_plural_token: value_of!(local_config_with_defaults, simply_plural_token)?,
-        simply_plural_base_url: value_of!(local_config_with_defaults, simply_plural_base_url)?,
-        discord_token: value_of_if!(
+        wait_seconds: config_value!(local_config_with_defaults, wait_seconds)?,
+        system_name: config_value_if!(cli_args.webserver, local_config_with_defaults, system_name)?,
+        simply_plural_token: config_value!(local_config_with_defaults, simply_plural_token)?,
+        simply_plural_base_url: config_value!(local_config_with_defaults, simply_plural_base_url)?,
+        discord_token: config_value_if!(
             platform_updater_mode,
             local_config_with_defaults,
             discord_token
         )?,
-        vrchat_username: value_of_if!(
+        vrchat_username: config_value_if!(
             platform_updater_mode,
             local_config_with_defaults,
             vrchat_username
         )?,
-        vrchat_password: value_of_if!(
+        vrchat_password: config_value_if!(
             platform_updater_mode,
             local_config_with_defaults,
             vrchat_password
         )?,
-        vrchat_updater_prefix: value_of!(local_config_with_defaults, vrchat_updater_prefix)?,
-        vrchat_updater_no_fronts: value_of!(local_config_with_defaults, vrchat_updater_no_fronts)?,
-        vrchat_updater_truncate_names_to: value_of!(
+        vrchat_updater_prefix: config_value!(local_config_with_defaults, vrchat_updater_prefix)?,
+        vrchat_updater_no_fronts: config_value!(
+            local_config_with_defaults,
+            vrchat_updater_no_fronts
+        )?,
+        vrchat_updater_truncate_names_to: config_value!(
             local_config_with_defaults,
             vrchat_updater_truncate_names_to
         )?,
-        vrchat_cookie: value_of!(local_config_with_defaults, vrchat_cookie)
+        vrchat_cookie: config_value!(local_config_with_defaults, vrchat_cookie)
             .inspect(|_| eprintln!("A VRChat cookie was found and will be used."))
             .unwrap_or(String::new()),
         cli_args: cli_args.clone(),

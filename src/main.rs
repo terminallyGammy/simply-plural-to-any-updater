@@ -40,7 +40,6 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-
 #[derive(Parser, Debug, Clone, Default)]
 #[clap(author, version, about, long_about = None)]
 pub struct CliArgs {

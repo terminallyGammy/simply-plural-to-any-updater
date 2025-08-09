@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::fronting_status;
+use crate::record_if_error;
 use crate::simply_plural;
 use crate::updater::Platform;
 use crate::vrchat_auth;
@@ -12,28 +13,38 @@ use vrchatapi::{
 
 type InitializedUpdater = (Configuration, String);
 pub struct VRChatUpdater {
+    pub last_operation_error: Option<String>,
     initialized: Option<InitializedUpdater>,
 }
 impl VRChatUpdater {
     pub const fn new(_platform: Platform) -> Self {
-        Self { initialized: None }
+        Self {
+            last_operation_error: None,
+            initialized: None,
+        }
     }
 
     pub async fn setup(&mut self, config: &Config) -> Result<()> {
-        self.initialized = Some(vrchat_auth::authenticate_vrchat(config).await?);
+        let init_value = record_if_error!(self, vrchat_auth::authenticate_vrchat(config).await);
+        self.initialized = Some(init_value?);
         Ok(())
     }
 
     pub async fn update_fronting_status(
-        &self,
+        &mut self,
         config: &Config,
         fronts: &[simply_plural::Fronter],
     ) -> Result<()> {
-        let initialized_updater = self
-            .initialized
-            .as_ref()
-            .ok_or_else(|| anyhow!("Updater not initalized!"))?;
-        update_to_vrchat(config, initialized_updater, fronts).await
+        let initialized_updater = record_if_error!(
+            self,
+            self.initialized
+                .as_ref()
+                .ok_or_else(|| anyhow!("Updater not initalized!"))
+        );
+        record_if_error!(
+            self,
+            update_to_vrchat(config, initialized_updater?, fronts).await
+        )
     }
 }
 

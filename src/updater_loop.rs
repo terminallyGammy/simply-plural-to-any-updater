@@ -18,10 +18,7 @@ pub async fn run_loop(config: &Config) {
 
     for u in updaters.as_mut_slice() {
         if u.enabled(config) {
-            log_error_and_continue(
-                &u.platform().to_string(), 
-                u.setup(config).await
-            );
+            log_error_and_continue(&u.platform().to_string(), u.setup(config).await);
         }
     }
 

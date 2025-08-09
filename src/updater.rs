@@ -14,10 +14,10 @@ pub enum Platform {
 #[derive(Clone, Serialize, strum_macros::Display)]
 pub enum UpdaterStatus {
     Inactive,
-    // Paused,
+    Paused,
     Running,
-    // Error,
-    // Unknown,
+    Error(String),
+    Unknown,
 }
 
 pub enum Updater {
@@ -37,6 +37,22 @@ impl Updater {
         match self {
             Self::VRChat(_) => Platform::VRChat,
             Self::Discord(_) => Platform::Discord,
+        }
+    }
+
+    pub fn status(&self, config: &Config) -> UpdaterStatus {
+        if self.enabled(config) {
+            self.last_operation_error()
+                .map_or(UpdaterStatus::Running, |e| UpdaterStatus::Error(e.clone()))
+        } else {
+            UpdaterStatus::Inactive
+        }
+    }
+
+    pub const fn last_operation_error(&self) -> Option<&String> {
+        match self {
+            Self::VRChat(updater) => updater.last_operation_error.as_ref(),
+            Self::Discord(updater) => updater.last_operation_error.as_ref(),
         }
     }
 

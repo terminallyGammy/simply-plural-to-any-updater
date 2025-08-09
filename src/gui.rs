@@ -53,7 +53,7 @@ fn get_updaters_state() -> Result<Vec<UpdaterState>, String> {
         },
         UpdaterState {
             updater: updater::Platform::Discord,
-            status: updater::UpdaterStatus::Inactive,
+            status: updater::UpdaterStatus::Error(String::from("some error")),
         },
     ])
 }

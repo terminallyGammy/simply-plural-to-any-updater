@@ -1,4 +1,4 @@
-use crate::{config::Config, fronting_status, simply_plural, updater::Platform};
+use crate::{config::Config, fronting_status, record_if_error, simply_plural, updater::Platform};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -12,10 +12,14 @@ struct Status {
     text: String,
 }
 
-pub struct DiscordUpdater;
+pub struct DiscordUpdater {
+    pub last_operation_error: Option<String>,
+}
 impl DiscordUpdater {
     pub const fn new(_platform: Platform) -> Self {
-        Self {}
+        Self {
+            last_operation_error: None,
+        }
     }
 
     #[allow(clippy::unused_async)]
@@ -24,11 +28,11 @@ impl DiscordUpdater {
     }
 
     pub async fn update_fronting_status(
-        &self,
+        &mut self,
         config: &Config,
         fronts: &[simply_plural::Fronter],
     ) -> Result<()> {
-        update_to_discord(config, fronts).await
+        record_if_error!(self, update_to_discord(config, fronts).await)
     }
 }
 

@@ -1,4 +1,7 @@
-# Project is actively moving from v2 to v2 and v2 isn't there where it wants to be yet
+# Project is actively moving from v1 to v2 and v2 isn't there where it wants to be yet
+
+v1: Simple local CLI to sync SP to VRChat and Discord
+v2: Cloud Service where users can register and have SP synced to other platforms via a GUI and where self-hosting isn't necessary.
 
 Once v2 is done, this warnijg will be removed. If you try to use the v2 codebase before, it'll likely not work.
 

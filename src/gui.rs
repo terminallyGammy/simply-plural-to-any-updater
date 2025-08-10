@@ -3,11 +3,12 @@
 use anyhow::{anyhow, Result};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
+use tauri::async_runtime::JoinHandle;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIcon;
-use tauri::{Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
-use crate::config::Config;
+use crate::config::{self};
 use crate::config_store;
 use crate::updater::UpdaterState;
 use crate::updater_loop;
@@ -23,6 +24,7 @@ struct SingleInstancePayload {
 struct AppState {
     cli_args: CliArgs,
     updater_state: Arc<Mutex<Vec<UpdaterState>>>,
+    updater_handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -33,11 +35,23 @@ fn get_config(state: State<AppState>) -> Result<config_store::LocalJsonConfigV2,
 
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
-fn set_config(
+fn set_config_and_restart(
+    app_handle: AppHandle,
     state: State<AppState>,
     config: config_store::LocalJsonConfigV2,
 ) -> Result<(), String> {
-    config_store::write_local_config_file(&config, &state.cli_args).map_err(|e| e.to_string())
+    config_store::write_local_config_file(&config, &state.cli_args).map_err(|e| e.to_string())?;
+
+    // todo. how can we avoid such unwraps?
+    #[allow(clippy::significant_drop_in_scrutinee)]
+    if let Some(handle) = state.updater_handle.lock().unwrap().take() {
+        eprintln!("Aborting previous updater task...");
+        handle.abort();
+    }
+
+    spawn_updater_loop(&app_handle).map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -50,13 +64,28 @@ fn get_updaters_state(state: State<AppState>) -> Result<Vec<UpdaterState>, Strin
         .map(|d| d.clone())
 }
 
+fn spawn_updater_loop(app_handle: &AppHandle) -> Result<()> {
+    let state = app_handle.state::<AppState>();
+    let config = config::setup_and_load_config(&state.cli_args)?;
+    let updater_state = state.updater_state.clone();
+
+    let handle: JoinHandle<()> = tauri::async_runtime::spawn(async move {
+        updater_loop::run_loop(&config, updater_state).await;
+    });
+
+    *state.updater_handle.lock().unwrap() = Some(handle);
+
+    Ok(())
+}
+
 pub fn run_tauri_gui(
-    config: Config,
+    cli_args: &CliArgs,
     updater_state: Arc<Mutex<Vec<UpdaterState>>>,
 ) -> Result<(), anyhow::Error> {
     let app_state = AppState {
-        cli_args: config.cli_args.clone(),
+        cli_args: cli_args.clone(),
         updater_state,
+        updater_handle: Mutex::new(None),
     };
 
     tauri::Builder::default()
@@ -69,17 +98,13 @@ pub fn run_tauri_gui(
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             get_config,
-            set_config,
+            set_config_and_restart,
             get_updaters_state
         ])
         .setup(move |app| {
             eprintln!("Tauri application setup complete. Spawning core logic...");
 
-            let shared_updater_state = app.handle().state::<AppState>().updater_state.clone();
-
-            tauri::async_runtime::spawn(async move {
-                updater_loop::run_loop(&config, shared_updater_state).await;
-            });
+            spawn_updater_loop(app.handle())?;
 
             tauri_system_tray_handler(app)?;
 

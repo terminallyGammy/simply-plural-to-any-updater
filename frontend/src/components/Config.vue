@@ -6,7 +6,7 @@
         <label :for="key">{{ key }}</label>
         <input :id="key" v-model="config[key]" />
       </div>
-      <button type="submit">Save</button>
+      <button type="submit">Save & Restart</button>
     </form>
   </div>
 </template>
@@ -31,7 +31,7 @@ onMounted(async () => {
 
 const saveConfig = async () => {
   try {
-    await invoke('set_config', { config: config.value });
+    await invoke('set_config_and_restart', { config: config.value });
   } catch (e) {
     console.error(e);
   }

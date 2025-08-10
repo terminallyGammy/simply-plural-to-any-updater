@@ -10,20 +10,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, type Ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
-const updaters = ref([
-  { updater: 'VRChat', status: 'Unknown' },
-  { updater: 'Discord', status: 'Unknown' },
-]);
+// todo. keep in sync with backend
+type UpdaterState = {updater: string, status: any};
 
-onMounted(async () => {
+const updaters: Ref<UpdaterState[]> = ref([]);
+
+let refreshViewIntervalTimer: any = null;
+
+const fetchUpdatersState = async () => {
   try {
     updaters.value = await invoke('get_updaters_state');
     console.log("get_updaters_state: ", updaters.value);
   } catch (e) {
     console.error(e);
   }
+};
+
+onMounted(async () => {
+  await fetchUpdatersState();
+  refreshViewIntervalTimer = setInterval(fetchUpdatersState, 3000);
+});
+
+onUnmounted(() => {
+  refreshViewIntervalTimer ?? clearInterval(refreshViewIntervalTimer);
 });
 </script>

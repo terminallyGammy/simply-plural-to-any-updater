@@ -28,7 +28,7 @@ fn main() -> Result<()> {
 
     let config = config::setup_and_load_config(&cli_args)?;
 
-    let updater_state = Arc::new(Mutex::new(vec![]));
+    let updater_state = Arc::new(Mutex::new(updater_loop::initial_updaters_state()));
 
     if cli_args.webserver {
         eprintln!("Running in Webserver mode ...");
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
         run_async_blocking!(updater_loop::run_loop(&config, updater_state));
     } else {
         eprintln!("Starting SP2Any Updater in GUI mode ...");
-        gui::run_tauri_gui(config, updater_state)?;
+        gui::run_tauri_gui(&cli_args, updater_state)?;
     }
 
     Ok(())

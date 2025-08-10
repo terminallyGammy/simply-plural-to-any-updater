@@ -31,6 +31,10 @@ pub enum Updater {
     Discord(DiscordUpdater),
 }
 
+pub fn implemented_updaters() -> Vec<Platform> {
+    vec![Platform::VRChat, Platform::Discord]
+}
+
 impl Updater {
     pub fn new(platform: Platform) -> Self {
         match platform {

@@ -1,23 +1,31 @@
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-};
+use std::sync::{Arc, Mutex};
+use tokio::time::sleep;
 
 use crate::{
     config::Config,
     simply_plural::{self},
-    updater::{Platform, Updater, UpdaterState},
+    updater::{self, Updater, UpdaterState, UpdaterStatus},
 };
 use anyhow::Result;
 use chrono::Utc;
 
+pub fn initial_updaters_state() -> Vec<UpdaterState> {
+    updater::implemented_updaters()
+        .iter()
+        .map(|platform| UpdaterState {
+            updater: platform.to_owned(),
+            status: UpdaterStatus::Unknown,
+        })
+        .collect()
+}
+
 pub async fn run_loop(config: &Config, updater_state: Arc<Mutex<Vec<UpdaterState>>>) {
     eprintln!("Running Updater ...");
 
-    let mut updaters = vec![
-        Updater::new(Platform::VRChat),
-        Updater::new(Platform::Discord),
-    ];
+    let mut updaters: Vec<Updater> = updater::implemented_updaters()
+        .iter()
+        .map(|platform| Updater::new(platform.to_owned()))
+        .collect();
 
     for u in updaters.as_mut_slice() {
         if u.enabled(config) {
@@ -45,7 +53,7 @@ pub async fn run_loop(config: &Config, updater_state: Arc<Mutex<Vec<UpdaterState
             config.wait_seconds.as_secs()
         );
 
-        thread::sleep(config.wait_seconds);
+        sleep(config.wait_seconds).await;
     }
 }
 

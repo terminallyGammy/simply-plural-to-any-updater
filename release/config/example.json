@@ -3,6 +3,10 @@
     "secs": 60,
     "nanos": 0
   },
+  "request_timeout": {
+    "secs": 5,
+    "nanos": 0
+  },
   "system_name": "Our System",
   "simply_plural_token": "simply plural token",
   "simply_plural_base_url": "https://api.apparyllis.com/v1",

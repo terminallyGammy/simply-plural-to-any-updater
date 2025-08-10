@@ -98,22 +98,25 @@ or
 Update the dependencies.
 ```
 
-### Current Migration
+---
 
-Migrate from directory local .env files to storing a .json in the home directoy.
-That can be manually edited as well as configured via the GUI.
+## TODOs
 
-* default behavior for default configuration remains same
-  * config JSON file is created, if none exists
-  * only the values, which the user explicitly set are written into the config file
-  * all other values are fetched from online from the github.com defaults
-* GUI fetches and displays values from JSON
-* don't offer a way to migrate from old .env file. keep code simple there.
-* update README.md
+### Typesafe API calls
 
-Furthermore, the following is how the GUI should look like:
-* a main page where one can see the various updaters (VRChat and Discord) and their status (Running, Error, Paused, Inactive)
-* a settings page where one can configure the local config from config_storage.rs
+Here is a concise summary of the specta approach for automatically keeping your Rust and TypeScript types consistent.
+
+The strategy is to make your Rust code the single source of truth for any data structures shared with the frontend.
+
+* Annotate Rust Types: In your Rust code, you find the structs and enums that are sent to the frontend (like LocalJsonConfigV2 and UpdaterState). You then add #[derive(specta::Type)] to them.
+* Add a Build Script: You create a build.rs file in your project's root. This script uses the specta-typescript library to find all the types you annotated.
+* Generate TypeScript: When you compile your Rust project with cargo build, the build script automatically runs. It generates a TypeScript file (e.g., frontend/src/bindings.ts) containing the TypeScript equivalent of your Rust types.
+* Use in Frontend: In your frontend code, you import the types from this auto-generated bindings.ts file. This allows you to use them in your fetch requests and component logic, guaranteeing that the frontend's understanding of the data structure always matches the backend's definition.
+
+### Migrate from Tauri DesktopApp to a Cloud-Service & WebApp
+
+* update README
+* actually do this!
 
 ### TODO
 

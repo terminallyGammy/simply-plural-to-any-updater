@@ -1,3 +1,9 @@
+# Project is actively moving from v2 to v2 and v2 isn't there where it wants to be yet
+
+Once v2 is done, this warnijg will be removed. If you try to use the v2 codebase before, it'll likely not work.
+
+----
+
 # simply-plural-to-any-updater
 
 Update your [Simply Plural](https://apparyllis.com/) system fronting status automatically to

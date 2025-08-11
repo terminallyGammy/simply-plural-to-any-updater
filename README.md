@@ -124,11 +124,6 @@ The strategy is to make your Rust code the single source of truth for any data s
 * Generate TypeScript: When you compile your Rust project with cargo build, the build script automatically runs. It generates a TypeScript file (e.g., frontend/src/bindings.ts) containing the TypeScript equivalent of your Rust types.
 * Use in Frontend: In your frontend code, you import the types from this auto-generated bindings.ts file. This allows you to use them in your fetch requests and component logic, guaranteeing that the frontend's understanding of the data structure always matches the backend's definition.
 
-### Migrate from Tauri DesktopApp to a Cloud-Service & WebApp
-
-* update README
-* actually do this!
-
 ### TODO
 
 * Add automatic sync to PluralKit

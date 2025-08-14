@@ -130,3 +130,7 @@ The strategy is to make your Rust code the single source of truth for any data s
 * Test that discord and vrchat updater work independently of each other
 * Rename 'VRChat Status Name' field to 'SP2Any Simple Name' field
 * Ask on Reddit and various discord servers for what features the users want
+
+#### User Feedback
+* discord rich presence / activity as additonal option instead of status only
+

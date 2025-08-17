@@ -4,6 +4,7 @@ use crate::auth::JwtString;
 use crate::config;
 use crate::config::UserConfigDbEntries;
 use crate::database;
+use crate::database::get_all_users;
 use crate::model::ApplicationJwtSecret;
 use crate::model::ApplicationUserSecrets;
 use crate::model::DecryptedDbSecret;
@@ -11,11 +12,14 @@ use crate::model::EncryptedDbSecret;
 use crate::model::UserId;
 use crate::model::UserLoginCredentials;
 use crate::setup;
+use crate::setup::ApplicationSetup;
 use crate::simply_plural;
 use crate::updater_loop;
 use crate::updater_manager;
+use crate::vrchat_auth;
 use crate::webview;
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use rocket::{
     response::{self, content::RawHtml},
     serde::json::Json,
@@ -23,21 +27,17 @@ use rocket::{
 };
 use sqlx::PgPool;
 
-pub async fn run_server(application_setup: setup::ApplicationSetup) -> Result<()> {
-    let setup::ApplicationSetup {
-        db_pool,
-        client,
-        jwt_secret,
-        application_user_secrets,
-        shared_updaters: shared_updater_state,
-    } = application_setup;
+type ResponseResult<T> = Result<T, response::Debug<anyhow::Error>>;
+
+pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
+    let () = restart_all_user_updaters_for_app_startups(setup.clone()).await?;
 
     let _ = rocket::build()
-        .manage(db_pool)
-        .manage(jwt_secret)
-        .manage(application_user_secrets)
-        .manage(client)
-        .manage(shared_updater_state)
+        .manage(setup.db_pool)
+        .manage(setup.jwt_secret)
+        .manage(setup.application_user_secrets)
+        .manage(setup.client)
+        .manage(setup.shared_updaters)
         .mount(
             "/api",
             routes![
@@ -57,11 +57,34 @@ pub async fn run_server(application_setup: setup::ApplicationSetup) -> Result<()
     Ok(())
 }
 
+async fn restart_all_user_updaters_for_app_startups(setup: ApplicationSetup) -> Result<()> {
+    eprintln!("Starting all user updaters ...");
+
+    let all_users = get_all_users(&setup.db_pool).await?;
+
+    eprintln!("Users: {all_users:?}");
+
+    for user in all_users {
+        restart_updater_for_user(
+            &user,
+            &setup.db_pool,
+            &setup.application_user_secrets,
+            &setup.client,
+            &setup.shared_updaters,
+        )
+        .await?;
+    }
+
+    eprintln!("Starting all user updaters. DONE.");
+
+    Ok(())
+}
+
 #[get("/updaters/state")]
 fn get_updaters_state(
     shared_updaters: &State<updater_manager::SharedUpdaters>,
-    jwt: Result<Jwt, response::Debug<anyhow::Error>>,
-) -> Result<Json<updater_loop::UserUpdatersStatuses>, response::Debug<anyhow::Error>> {
+    jwt: ResponseResult<Jwt>,
+) -> ResponseResult<Json<updater_loop::UserUpdatersStatuses>> {
     let user_id = jwt?.user_id()?;
 
     let updaters_state: updater_loop::UserUpdatersStatuses =
@@ -72,19 +95,42 @@ fn get_updaters_state(
 
 #[post("/updaters/restart")]
 async fn restart_updaters(
-    jwt: Result<Jwt, response::Debug<anyhow::Error>>,
+    jwt: ResponseResult<Jwt>,
     db_pool: &State<PgPool>,
     application_user_secrets: &State<ApplicationUserSecrets>,
     client: &State<reqwest::Client>,
     shared_updater_state: &State<updater_manager::SharedUpdaters>,
-) -> Result<(), response::Debug<anyhow::Error>> {
+) -> ResponseResult<()> {
     let user_id = jwt?.user_id()?;
 
-    let db_config = database::get_user_secrets(db_pool, &user_id, application_user_secrets).await?;
+    let () = restart_updater_for_user(
+        &user_id,
+        db_pool,
+        application_user_secrets,
+        client,
+        shared_updater_state,
+    )
+    .await?;
 
-    let (config, _) = config::create_config_with_strong_constraints(&user_id, client, &db_config)?;
+    Ok(())
+}
 
-    let () = shared_updater_state.restart_updater(&user_id, config)?;
+async fn restart_updater_for_user(
+    user_id: &UserId,
+    db_pool: &PgPool,
+    application_user_secrets: &ApplicationUserSecrets,
+    client: &reqwest::Client,
+    shared_updater_state: &updater_manager::SharedUpdaters,
+) -> Result<()> {
+    eprintln!("Restarting user updaters {user_id} ...");
+
+    let db_config = database::get_user_secrets(db_pool, user_id, application_user_secrets).await?;
+
+    let (config, _) = config::create_config_with_strong_constraints(user_id, client, &db_config)?;
+
+    let () = shared_updater_state.restart_updater(user_id, config)?;
+
+    eprintln!("Restarting user updaters {user_id}. DONE.");
 
     Ok(())
 }
@@ -95,32 +141,32 @@ async fn rest_get_fronting(
     db_pool: &State<PgPool>,
     application_user_secrets: &State<ApplicationUserSecrets>,
     client: &State<reqwest::Client>,
-) -> Result<RawHtml<String>, response::Debug<anyhow::Error>> {
+) -> ResponseResult<RawHtml<String>> {
     eprintln!("GET /fronting/{user_id}.");
 
     let user_id: UserId = user_id.try_into()?;
 
-    eprintln!("GET /fronting/{}. Getting user secrets", user_id.inner);
+    eprintln!("GET /fronting/{user_id}. Getting user secrets");
 
     let user_config =
         database::get_user_secrets(db_pool, &user_id, application_user_secrets).await?;
 
-    eprintln!("GET /fronting/{}. Creating config", user_id.inner);
+    eprintln!("GET /fronting/{user_id}. Creating config");
 
     let (updater_config, _) =
         config::create_config_with_strong_constraints(&user_id, client, &user_config)?;
 
-    eprintln!("GET /fronting/{}. Fetching fronts", user_id.inner);
+    eprintln!("GET /fronting/{user_id}. Fetching fronts");
 
     let fronts = simply_plural::fetch_fronts(&updater_config)
         .await
         .map_err(response::Debug)?;
 
-    eprintln!("GET /fronting/{}. Rendering HTML", user_id.inner);
+    eprintln!("GET /fronting/{user_id}. Rendering HTML");
 
     let html = webview::generate_html(&updater_config.system_name, fronts);
 
-    eprintln!("GET /fronting/{}. OK", user_id.inner);
+    eprintln!("GET /fronting/{user_id}. OK");
     Ok(RawHtml(html))
 }
 
@@ -128,7 +174,7 @@ async fn rest_get_fronting(
 async fn register(
     db_pool: &State<PgPool>,
     credentials: Json<UserLoginCredentials>,
-) -> Result<(), response::Debug<anyhow::Error>> {
+) -> ResponseResult<()> {
     let pwh = auth::create_password_hash(&credentials.password)?;
 
     database::create_user(db_pool, credentials.email.clone(), pwh)
@@ -158,8 +204,8 @@ async fn login(
 #[get("/user/config")]
 async fn get_config(
     db_pool: &State<PgPool>,
-    jwt: Result<Jwt, response::Debug<anyhow::Error>>,
-) -> Result<Json<UserConfigDbEntries<EncryptedDbSecret>>, response::Debug<anyhow::Error>> {
+    jwt: ResponseResult<Jwt>,
+) -> ResponseResult<Json<UserConfigDbEntries<EncryptedDbSecret>>> {
     let user_id = jwt?.user_id()?;
 
     let user_config = database::get_user(db_pool, &user_id).await?;
@@ -170,11 +216,11 @@ async fn get_config(
 #[post("/user/config", data = "<config>")]
 async fn set_config(
     config: Json<UserConfigDbEntries<DecryptedDbSecret>>,
-    jwt: Result<Jwt, response::Debug<anyhow::Error>>,
+    jwt: ResponseResult<Jwt>,
     db_pool: &State<PgPool>,
     app_user_secrets: &State<ApplicationUserSecrets>,
     client: &State<reqwest::Client>,
-) -> Result<(), response::Debug<anyhow::Error>> {
+) -> ResponseResult<()> {
     let user_id = jwt?.user_id()?;
 
     // check that config satisfies contraints
@@ -185,4 +231,18 @@ async fn set_config(
         .await?;
 
     Ok(())
+}
+
+#[post("/user/platform/vrchat/auth", data = "<creds>")]
+async fn vrchat_user_authentication(
+    creds: Json<vrchat_auth::VRChatCredentials>,
+    jwt: ResponseResult<Jwt>,
+) -> ResponseResult<()> {
+    let creds = creds.into_inner();
+    let request_two_factor_auth_code = |_c, _m| async move { Ok(todo!()) };
+
+    let _ = vrchat_auth::authenticate_vrchat_for_new_cookie(creds, request_two_factor_auth_code)
+        .await?;
+
+    todo!();
 }

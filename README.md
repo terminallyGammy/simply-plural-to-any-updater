@@ -136,6 +136,7 @@ The strategy is to make your Rust code the single source of truth for any data s
   * cheap free tier VMs and docker based deployment?
   * using [free managed postgres](https://www.bytebase.com/blog/postgres-hosting-options-pricing-comparison/) with free tier serverless functions?
   * alternatively a mixture of the above?
+* test vrchat login: user+pwd and user+pwd+2fa
 
 #### User Feedback
 * discord rich presence / activity as additonal option instead of status only

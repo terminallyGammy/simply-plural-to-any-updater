@@ -2672,6 +2672,7 @@ dependencies = [
  "clap",
  "directories",
  "dotenvy",
+ "either",
  "encoding_rs",
  "html-escape",
  "jsonwebtoken",

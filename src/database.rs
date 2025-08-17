@@ -148,6 +148,18 @@ pub async fn get_user_secrets(
     .map_err(|e| anyhow!(e))
 }
 
+pub async fn get_all_users(db_pool: &PgPool) -> Result<Vec<UserId>> {
+    sqlx::query_as!(
+        UserId,
+        "SELECT
+            id AS inner
+        FROM users"
+    )
+    .fetch_all(db_pool)
+    .await
+    .map_err(|e| anyhow!(e))
+}
+
 pub async fn get_user_info(db_pool: &PgPool, user_id: UserId) -> Result<UserInfo> {
     sqlx::query_as!(
         UserInfo,

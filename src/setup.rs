@@ -52,6 +52,7 @@ pub struct CliArgs {
     pub application_user_secrets: String,
 }
 
+#[derive(Clone)]
 pub struct ApplicationSetup {
     pub db_pool: sqlx::PgPool,
     pub client: reqwest::Client,

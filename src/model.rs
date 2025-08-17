@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::Duration};
+use std::{fmt::Display, str::FromStr, time::Duration};
 
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
@@ -36,6 +36,12 @@ impl TryFrom<&str> for UserId {
     }
 }
 
+impl Display for UserId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UserId({})", self.inner)
+    }
+}
+
 #[derive(Deserialize, Clone)]
 pub struct UserProvidedPassword {
     pub inner: String,
@@ -56,10 +62,12 @@ pub struct UserSecretsKey {
     pub inner: String,
 }
 
+#[derive(Clone)]
 pub struct ApplicationJwtSecret {
     pub inner: String,
 }
 
+#[derive(Clone)]
 pub struct ApplicationUserSecrets {
     pub inner: String,
 }

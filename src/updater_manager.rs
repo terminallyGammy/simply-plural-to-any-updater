@@ -56,11 +56,13 @@ impl SharedUpdaters {
             .get_mut(user_id)
             .ok_or_else(|| anyhow!("No updaters found!"))?;
 
+        eprintln!("Aborting updater {user_id}");
         let owned_self = self.clone();
         task.abort(); // todo. how d we check, that we don't have any significant blocking calls anywhere???
         *task = tokio::spawn(async move {
             updater_loop::run_loop(config, owned_self).await;
         });
+        eprintln!("Restarted updater {user_id}");
 
         Ok(())
     }

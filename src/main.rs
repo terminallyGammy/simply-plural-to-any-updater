@@ -30,5 +30,5 @@ async fn main() -> Result<()> {
 
     let app_setup = setup::application_setup(&cli_args).await?;
 
-    api::run_server(app_setup).await
+    api::start_application(app_setup).await
 }

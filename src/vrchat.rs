@@ -25,7 +25,10 @@ impl VRChatUpdater {
     }
 
     pub async fn setup(&mut self, config: &UserConfigForUpdater) -> Result<()> {
-        let init_value = record_if_error!(self, vrchat_auth::authenticate_vrchat(config).await);
+        let init_value = record_if_error!(
+            self,
+            vrchat_auth::authenticate_vrchat_with_cookie(config).await
+        );
         self.initialized = Some(init_value?);
         Ok(())
     }

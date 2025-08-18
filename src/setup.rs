@@ -1,12 +1,8 @@
-use crate::api;
 use crate::model;
 use crate::updater_manager;
 use anyhow::Result;
 use clap::Parser;
 use sqlx::postgres;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::time::Duration;
 
 pub async fn application_setup(cli_args: &CliArgs) -> Result<ApplicationSetup> {
@@ -31,15 +27,12 @@ pub async fn application_setup(cli_args: &CliArgs) -> Result<ApplicationSetup> {
 
     let shared_updaters = updater_manager::SharedUpdaters::new();
 
-    let tmp_vrchat_auth_code_state = Arc::new(Mutex::new(HashMap::new()));
-
     Ok(ApplicationSetup {
         db_pool,
         client,
         jwt_secret,
         application_user_secrets,
         shared_updaters,
-        tmp_vrchat_auth_code_state,
     })
 }
 
@@ -66,5 +59,4 @@ pub struct ApplicationSetup {
     pub jwt_secret: model::ApplicationJwtSecret,
     pub application_user_secrets: model::ApplicationUserSecrets,
     pub shared_updaters: updater_manager::SharedUpdaters,
-    pub tmp_vrchat_auth_code_state: api::VRChatAuthCodeState,
 }

@@ -1,7 +1,3 @@
-use std::ops::DerefMut;
-use std::sync::Arc;
-use std::sync::Mutex;
-
 use crate::auth;
 use crate::auth::Jwt;
 use crate::auth::JwtString;
@@ -20,14 +16,11 @@ use crate::setup::ApplicationSetup;
 use crate::simply_plural;
 use crate::updater_loop;
 use crate::updater_manager;
-use crate::updater_manager::ThreadSafePerUserNew;
 use crate::vrchat_auth;
-use crate::vrchat_auth::TwoFactorAuthCode;
-use crate::vrchat_auth::TwoFactorAuthMethod;
 use crate::webview;
 use anyhow::anyhow;
 use anyhow::Result;
-use futures::channel::oneshot;
+use either::Either;
 use rocket::{
     response::{self, content::RawHtml},
     serde::json::Json,
@@ -46,7 +39,6 @@ pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
         .manage(setup.application_user_secrets)
         .manage(setup.client)
         .manage(setup.shared_updaters)
-        .manage(setup.tmp_vrchat_auth_code_state)
         .mount(
             "/api",
             routes![
@@ -247,129 +239,26 @@ async fn set_config(
 #[post("/user/platform/vrchat/auth_2fa/request", data = "<creds>")]
 async fn vrchat_user_authentication_request(
     creds: Json<vrchat_auth::VRChatCredentials>,
-    jwt: ResponseResult<Jwt>,
-    tmp_vrchat_auth_code_state: &State<VRChatAuthCodeState>,
-) -> ResponseResult<Json<TwoFactorAuthMethod>> {
-    let user_id = jwt?.user_id()?;
+    _jwt: ResponseResult<Jwt>, // request should be authenticated, but we don't need user id
+) -> ResponseResult<
+    Json<Either<vrchat_auth::VRChatCredentialsWithCookie, vrchat_auth::TwoFactorAuthMethod>>,
+> {
     let creds = creds.into_inner();
 
-    let (tfa_promise, tfa_future) = oneshot::channel();
-    let (method_promise, method_future) = oneshot::channel();
-    let (valid_creds_promise, valid_creds_future) = oneshot::channel();
+    let creds_or_tfa_method = vrchat_auth::authenticate_vrchat_for_new_cookie(creds).await?;
 
-    let () = insert_channels(
-        &user_id,
-        tmp_vrchat_auth_code_state,
-        valid_creds_future,
-        tfa_promise,
-    )
-    .await?;
+    Ok(Json(creds_or_tfa_method))
+}
 
-    let request_two_factor_auth_code = |_c, request_method| async move {
-        let () = method_promise
-            .send(request_method)
-            .map_err(|e| anyhow!("Promoie send failed: {e}"))?;
-        let code = tfa_future
-            .await
-            .map_err(|e| anyhow!("TwoFactorAuth Future Error: {e}"))?;
-        Ok(code)
-    };
+#[post("/user/platform/vrchat/auth_2fa/resolve", data = "<creds_with_tfa>")]
+async fn vrchat_user_authentication_resolve(
+    _jwt: ResponseResult<Jwt>, // request should be authenticated, but we don't need user id
+    creds_with_tfa: Json<vrchat_auth::VRChatCredentialsWithTwoFactorAuth>,
+) -> ResponseResult<Json<vrchat_auth::VRChatCredentialsWithCookie>> {
+    let creds_with_tfa = creds_with_tfa.into_inner();
 
     let valid_creds =
-        vrchat_auth::authenticate_vrchat_for_new_cookie(creds, request_two_factor_auth_code)
-            .await?;
+        vrchat_auth::authenticate_vrchat_for_new_cookie_with_2fa(creds_with_tfa).await?;
 
-    // read the required auth method.
-    // let lock1 = tmp_vrchat_auth_code_state
-    //     .lock()
-    //     .map_err(|e| response::Debug(anyhow!("Lock error: {e}")))?;
-
-    // let (_,method_fut,_) = lock1
-    //     .get(&user_id)
-    //     .ok_or_else(|| response::Debug(anyhow!("Empty Option.")))?
-    //     .lock()
-    //     .map_err(|e| response::Debug(anyhow!("Lock error: {e}")))?;
-
-    let method = method_future
-        .await
-        .map_err(|e| response::Debug(anyhow!(e)))?;
-
-    let () = valid_creds_promise
-        .send(valid_creds)
-        .map_err(|_| response::Debug(anyhow!("Send failed!")))?;
-
-    Ok(Json(method))
-}
-
-/*
-THIS IS A MESS!!!! WE NEED TO FIX THIS AND IMPLEMENT IT MUCH DIFFERENTLY!
-We need to split authenticate_vrchat_user and then it should work!
-*/
-
-pub type VRChatAuthCodeState = ThreadSafePerUserNew<(
-    oneshot::Receiver<vrchat_auth::VRChatCredentialsWithCookie>,
-    Option<oneshot::Sender<TwoFactorAuthCode>>,
-)>;
-
-async fn insert_channels(
-    user_id: &UserId,
-    tmp_vrchat_auth_code_state: &VRChatAuthCodeState,
-    valid_creds_future: oneshot::Receiver<vrchat_auth::VRChatCredentialsWithCookie>,
-    tfa_promise: oneshot::Sender<TwoFactorAuthCode>,
-) -> ResponseResult<()> {
-    let arc_mut_tuple = Arc::new(Mutex::new((valid_creds_future, Some(tfa_promise))));
-
-    tmp_vrchat_auth_code_state
-        .lock()
-        .map_err(|e| response::Debug(anyhow!("Lock error: {e}")))?
-        .deref_mut()
-        .insert(user_id.clone(), arc_mut_tuple);
-
-    Ok(())
-}
-
-#[post("/user/platform/vrchat/auth_2fa/resolve", data = "<tfa_code>")]
-async fn vrchat_user_authentication_resolve(
-    jwt: ResponseResult<Jwt>,
-    tfa_code: Json<vrchat_auth::TwoFactorAuthCode>,
-    tmp_vrchat_auth_code_state: &State<VRChatAuthCodeState>,
-) -> ResponseResult<Json<vrchat_auth::VRChatCredentialsWithCookie>> {
-    let user_id = jwt?.user_id()?;
-    let tfa_code = tfa_code.into_inner();
-
-    todo!()
-
-    // let creds = resolve_workflow(&user_id, tfa_code, tmp_vrchat_auth_code_state)
-    //     .await
-    //     .map_err(response::Debug)?;
-
-    // Ok(Json(creds))
-}
-
-async fn resolve_workflow(
-    user_id: &UserId,
-    tfa_code: TwoFactorAuthCode,
-    tmp_vrchat_auth_code_state: &State<VRChatAuthCodeState>,
-) -> Result<vrchat_auth::VRChatCredentialsWithCookie> {
-    let hm = tmp_vrchat_auth_code_state
-        .lock()
-        .map_err(|e| anyhow!("Lock error: {e}"))?;
-
-    let tuple = hm
-        .get(user_id)
-        .ok_or_else(|| anyhow!("No channels for userid found. {}", &user_id))?;
-
-    let mut t = tuple.lock();
-
-    let (creds, code_prom) = t.as_deref_mut().map_err(|e| anyhow!("Error: {e}"))?;
-
-    let cp_opt = code_prom.take();
-
-    let cp = cp_opt.ok_or_else(|| anyhow!("No sender found!"))?;
-
-    let () = cp.send(tfa_code).map_err(|_| anyhow!("Send error."))?;
-
-    let creds = creds.await.map_err(|e| anyhow!(e))?;
-
-    Ok(creds)
+    Ok(Json(valid_creds))
 }

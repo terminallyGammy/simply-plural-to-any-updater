@@ -6,7 +6,6 @@ use either::Either;
 use reqwest::cookie::{self, CookieStore};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::future::Future;
 use std::str::FromStr;
 use std::sync::Arc;
 use strum_macros::Display;
@@ -24,14 +23,13 @@ const VRCHAT_UPDATER_USER_AGENT: &str = concat!(
     "gmail.com"
 );
 
+type VrcCookieStore = Arc<reqwest::cookie::Jar>;
 const VRCHAT_COOKIE_URL: &str = "https://api.vrchat.cloud";
 
 /* Called in updater. Cookie is only validated, no new cookie is created. */
 pub async fn authenticate_vrchat_with_cookie(
     config: &UserConfigForUpdater,
 ) -> Result<(VrcConfig, String)> {
-    let cookie_store = Arc::new(cookie::Jar::default());
-
     let creds: VRChatCredentialsWithCookie = (
         &config.vrchat_username,
         &config.vrchat_password,
@@ -39,17 +37,15 @@ pub async fn authenticate_vrchat_with_cookie(
     )
         .into();
 
-    let vrchat_config = new_vrchat_config_with_basic_auth_and_optional_cookie(
-        Either::Right(&creds),
-        &cookie_store,
-    )?;
+    let (vrchat_config, _) =
+        new_vrchat_config_with_basic_auth_and_optional_cookie(Either::Right(&creds))?;
 
     let () = match authentication_api::get_current_user(&vrchat_config).await? {
         vrc::EitherUserOrTwoFactor::CurrentUser(_me) => {
             eprintln!("VRChat Cookie valid for {}", config.user_id);
             Ok(())
         }
-        _ => Err(anyhow!("Login failed")),
+        vrc::EitherUserOrTwoFactor::RequiresTwoFactorAuth(_) => Err(anyhow!("Login failed")),
     }?;
 
     let user_id = get_vrchat_user_id(config, &vrchat_config).await?;
@@ -57,58 +53,47 @@ pub async fn authenticate_vrchat_with_cookie(
     Ok((vrchat_config, user_id))
 }
 
-pub async fn authenticate_vrchat_for_new_cookie<AuthCodeFuture>(
+pub async fn authenticate_vrchat_for_new_cookie(
     creds: VRChatCredentials,
-    request_two_factor_auth_code: impl FnOnce(VRChatCredentials, TwoFactorAuthMethod) -> AuthCodeFuture,
-) -> Result<VRChatCredentialsWithCookie>
-where
-    AuthCodeFuture: Future<Output = Result<TwoFactorAuthCode>>,
-{
-    let cookie_store = Arc::new(cookie::Jar::default());
+) -> Result<Either<VRChatCredentialsWithCookie, TwoFactorAuthMethod>> {
+    let (vrchat_config, cookie_store) =
+        new_vrchat_config_with_basic_auth_and_optional_cookie(Either::Left(&creds))?;
 
-    let vrchat_config =
-        new_vrchat_config_with_basic_auth_and_optional_cookie(Either::Left(&creds), &cookie_store)?;
-
-    authenticate_vrchat_user(&creds, &vrchat_config, request_two_factor_auth_code).await?;
-
-    let cookie = extract_new_cookie(cookie_store)?;
-
-    Ok((&creds, cookie.as_str()).into())
-}
-
-async fn authenticate_vrchat_user<AuthCodeFuture>(
-    creds: &VRChatCredentials,
-    vrchat_config: &VrcConfig,
-    request_two_factor_auth_code: impl FnOnce(VRChatCredentials, TwoFactorAuthMethod) -> AuthCodeFuture,
-) -> Result<()>
-where
-    AuthCodeFuture: Future<Output = Result<TwoFactorAuthCode>>,
-{
-    let authentication = authentication_api::get_current_user(vrchat_config).await?;
-
-    match authentication {
+    match authentication_api::get_current_user(&vrchat_config).await? {
         // User doesn't need 2fa
-        vrc::EitherUserOrTwoFactor::CurrentUser(_me) => Ok(()),
+        vrc::EitherUserOrTwoFactor::CurrentUser(_me) => {
+            let cookie = extract_new_cookie(&cookie_store)?;
+            let creds_with_cookie = (&creds, cookie.as_str()).into();
+            Ok(Either::Left(creds_with_cookie))
+        }
 
         vrc::EitherUserOrTwoFactor::RequiresTwoFactorAuth(requires_auth) => {
-            let auth_method = TwoFactorAuthMethod::from(requires_auth);
-
-            let auth_code =
-                request_two_factor_auth_code(creds.clone(), auth_method.clone()).await?;
-
-            let () = auth_method
-                .vrchat_verify_2fa(auth_code, vrchat_config)
-                .await?;
-
-            Ok(())
+            let auth_method = TwoFactorAuthMethod::from(&requires_auth);
+            Ok(Either::Right(auth_method))
         }
     }
 }
 
+pub async fn authenticate_vrchat_for_new_cookie_with_2fa(
+    creds_with_tfa: VRChatCredentialsWithTwoFactorAuth,
+) -> Result<VRChatCredentialsWithCookie> {
+    let (vrchat_config, cookie_store) =
+        new_vrchat_config_with_basic_auth_and_optional_cookie(Either::Left(&creds_with_tfa.creds))?;
+
+    let () = creds_with_tfa
+        .method
+        .vrchat_verify_2fa(creds_with_tfa.code, &vrchat_config)
+        .await?;
+
+    let cookie = extract_new_cookie(&cookie_store)?;
+
+    Ok((&creds_with_tfa.creds, cookie.as_str()).into())
+}
+
 fn new_vrchat_config_with_basic_auth_and_optional_cookie(
     creds: Either<&VRChatCredentials, &VRChatCredentialsWithCookie>,
-    cookie_store: &Arc<cookie::Jar>,
-) -> Result<VrcConfig> {
+) -> Result<(VrcConfig, VrcCookieStore)> {
+    let cookie_store = Arc::new(cookie::Jar::default());
     let cookie_url = &Url::from_str(VRCHAT_COOKIE_URL)?;
 
     let username = creds.either(|c| &c.username, |c| &c.creds.username);
@@ -128,10 +113,10 @@ fn new_vrchat_config_with_basic_auth_and_optional_cookie(
         ..Default::default()
     };
 
-    Ok(vrchat_config)
+    Ok((vrchat_config, cookie_store))
 }
 
-fn extract_new_cookie(cookie_store: Arc<cookie::Jar>) -> Result<String> {
+fn extract_new_cookie(cookie_store: &Arc<cookie::Jar>) -> Result<String> {
     let cookie_url = &Url::from_str(VRCHAT_COOKIE_URL)?;
     let cookie_value = cookie_store
         .cookies(cookie_url)
@@ -235,7 +220,7 @@ impl TwoFactorAuthMethod {
         Ok(())
     }
 
-    fn from(requires_2fa_auth: RequiresTwoFactorAuth) -> Self {
+    fn from(requires_2fa_auth: &RequiresTwoFactorAuth) -> Self {
         let is_email_2fa = requires_2fa_auth
             .requires_two_factor_auth
             .contains(&String::from("emailOtp"));
@@ -257,23 +242,9 @@ impl From<TwoFactorAuthCode> for String {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_compilation_with_async_move_future() -> Result<()> {
-        let creds = ("user", "pwd").into();
-
-        let request_two_factor_auth_code =
-            |creds: VRChatCredentials, method: TwoFactorAuthMethod| async move {
-                Ok(TwoFactorAuthCode(format!("{creds:?}: {method}(123456)")))
-            };
-
-        if false {
-            authenticate_vrchat_for_new_cookie(creds, request_two_factor_auth_code).await?;
-        }
-
-        Ok(())
-    }
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct VRChatCredentialsWithTwoFactorAuth {
+    creds: VRChatCredentials,
+    method: TwoFactorAuthMethod,
+    code: TwoFactorAuthCode,
 }

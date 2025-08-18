@@ -1,3 +1,7 @@
+use std::ops::DerefMut;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use crate::auth;
 use crate::auth::Jwt;
 use crate::auth::JwtString;
@@ -16,10 +20,15 @@ use crate::setup::ApplicationSetup;
 use crate::simply_plural;
 use crate::updater_loop;
 use crate::updater_manager;
+use crate::updater_manager::ThreadSafePerUserNew;
 use crate::vrchat_auth;
+use crate::vrchat_auth::TwoFactorAuthCode;
+use crate::vrchat_auth::TwoFactorAuthMethod;
+use crate::vrchat_auth::VRChatCredentials;
 use crate::webview;
 use anyhow::anyhow;
 use anyhow::Result;
+use futures::channel::oneshot;
 use rocket::{
     response::{self, content::RawHtml},
     serde::json::Json,
@@ -38,6 +47,7 @@ pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
         .manage(setup.application_user_secrets)
         .manage(setup.client)
         .manage(setup.shared_updaters)
+        .manage(setup.tmp_vrchat_auth_code_state)
         .mount(
             "/api",
             routes![
@@ -47,7 +57,9 @@ pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
                 register,
                 login,
                 get_config,
-                set_config
+                set_config,
+                vrchat_user_authentication_request,
+                vrchat_user_authentication_resolve
             ],
         )
         .launch()
@@ -120,7 +132,7 @@ async fn restart_updater_for_user(
     db_pool: &PgPool,
     application_user_secrets: &ApplicationUserSecrets,
     client: &reqwest::Client,
-    shared_updater_state: &updater_manager::SharedUpdaters,
+    shared_updaters: &updater_manager::SharedUpdaters,
 ) -> Result<()> {
     eprintln!("Restarting user updaters {user_id} ...");
 
@@ -128,7 +140,7 @@ async fn restart_updater_for_user(
 
     let (config, _) = config::create_config_with_strong_constraints(user_id, client, &db_config)?;
 
-    let () = shared_updater_state.restart_updater(user_id, config)?;
+    let () = shared_updaters.restart_updater(user_id, config)?;
 
     eprintln!("Restarting user updaters {user_id}. DONE.");
 
@@ -233,16 +245,98 @@ async fn set_config(
     Ok(())
 }
 
-#[post("/user/platform/vrchat/auth", data = "<creds>")]
-async fn vrchat_user_authentication(
+#[post("/user/platform/vrchat/auth_2fa/request", data = "<creds>")]
+async fn vrchat_user_authentication_request(
     creds: Json<vrchat_auth::VRChatCredentials>,
     jwt: ResponseResult<Jwt>,
+    tmp_vrchat_auth_code_state: &State<VRChatAuthCodeState>,
 ) -> ResponseResult<()> {
+    let user_id = jwt?.user_id()?;
     let creds = creds.into_inner();
-    let request_two_factor_auth_code = |_c, _m| async move { Ok(todo!()) };
+
+    let (tfa_promise, tfa_future) = oneshot::channel();
+    let (method_promise, method_future) = oneshot::channel();
+
+    let () = insert_channels(
+        &user_id,
+        &creds,
+        tmp_vrchat_auth_code_state,
+        method_future,
+        tfa_promise,
+    )
+    .await?;
+
+    let request_two_factor_auth_code = |_c, request_method| async move {
+        let () = method_promise
+            .send(request_method)
+            .map_err(|e| anyhow!("Promoie send failed: {e}"))?;
+        let code = tfa_future
+            .await
+            .map_err(|e| anyhow!("TwoFactorAuth Future Error: {e}"))?;
+        Ok(code)
+    };
 
     let _ = vrchat_auth::authenticate_vrchat_for_new_cookie(creds, request_two_factor_auth_code)
         .await?;
+
+    todo!();
+}
+
+pub type VRChatAuthCodeState = ThreadSafePerUserNew<(
+    VRChatCredentials,
+    oneshot::Receiver<TwoFactorAuthMethod>,
+    oneshot::Sender<TwoFactorAuthCode>,
+)>;
+async fn insert_channels(
+    user_id: &UserId,
+    creds: &vrchat_auth::VRChatCredentials,
+    tmp_vrchat_auth_code_state: &VRChatAuthCodeState,
+    method_future: oneshot::Receiver<TwoFactorAuthMethod>,
+    tfa_promise: oneshot::Sender<TwoFactorAuthCode>,
+) -> ResponseResult<()> {
+    let arc_mut_tuple = Arc::new(Mutex::new((creds.clone(), method_future, tfa_promise)));
+
+    tmp_vrchat_auth_code_state
+        .lock()
+        .map_err(|e| response::Debug(anyhow!("Lock error: {e}")))?
+        .deref_mut()
+        .insert(user_id.clone(), arc_mut_tuple);
+
+    Ok(())
+}
+
+#[post("/user/platform/vrchat/auth_2fa/resolve", data = "<tfa_code>")]
+async fn vrchat_user_authentication_resolve(
+    jwt: ResponseResult<Jwt>,
+    tfa_code: Json<vrchat_auth::TwoFactorAuthCode>,
+    tmp_vrchat_auth_code_state: &State<VRChatAuthCodeState>,
+) -> ResponseResult<Json<vrchat_auth::VRChatCredentialsWithCookie>> {
+    let user_id = jwt?.user_id()?;
+    let tfa_code = tfa_code.into_inner();
+
+    // let t = {
+    //     let hm = tmp_vrchat_auth_code_state
+    //         .lock()
+    //         .map_err(|e| response::Debug(anyhow!("Lock error: {e}")))?;
+
+    //     let tuple = hm
+    //         .get(&user_id)
+    //         .ok_or_else(|| anyhow!("No channels for userid found. {}", &user_id))?;
+
+    //     let mut t = tuple.lock();
+
+    //     let mut t2 = t.as_deref_mut().map_err(|e| anyhow!("Error: {e}"))?;
+
+    //     let creds = &t2.0;
+    //     let code_prom = &t2.2;
+
+    //     todo!();
+    //     let cp = *code_prom;
+
+    //     cp.send(tfa_code);
+
+    //     creds.clone()
+    // };
 
     todo!();
 }

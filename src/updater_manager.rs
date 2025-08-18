@@ -5,19 +5,21 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub type ThreadSafePerUser<T> = Arc<Mutex<HashMap<UserId, T>>>;
+pub type SharedMutable<T> = Arc<Mutex<T>>;
+pub type ThreadSafePerUser<T> = SharedMutable<HashMap<UserId, T>>;
+pub type ThreadSafePerUserNew<T> = SharedMutable<HashMap<UserId, SharedMutable<T>>>;
 
 #[derive(Clone)]
 pub struct SharedUpdaters {
     pub tasks: ThreadSafePerUser<updater_loop::CancleableUpdater>,
-    pub states: ThreadSafePerUser<updater_loop::UserUpdatersStatuses>,
+    pub statuses: ThreadSafePerUser<updater_loop::UserUpdatersStatuses>,
 }
 
 impl SharedUpdaters {
     pub fn new() -> Self {
         Self {
             tasks: Arc::new(Mutex::new(HashMap::new())),
-            states: Arc::new(Mutex::new(HashMap::new())),
+            statuses: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -26,7 +28,7 @@ impl SharedUpdaters {
         user_id: &UserId,
     ) -> Result<updater_loop::UserUpdatersStatuses> {
         Ok(self
-            .states
+            .statuses
             .lock()
             .map_err(|e| anyhow!(e.to_string()))?
             .get(user_id)
@@ -39,7 +41,7 @@ impl SharedUpdaters {
         user_id: &UserId,
         updater_state: updater_loop::UserUpdatersStatuses,
     ) -> Result<()> {
-        let mut locked_updater_states = self.states.lock().map_err(|e| anyhow!(e.to_string()))?;
+        let mut locked_updater_states = self.statuses.lock().map_err(|e| anyhow!(e.to_string()))?;
 
         let _ = locked_updater_states
             .insert(user_id.to_owned(), updater_state)

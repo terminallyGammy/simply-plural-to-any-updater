@@ -59,7 +59,7 @@ pub async fn authenticate_vrchat_with_cookie(
 
 pub async fn authenticate_vrchat_for_new_cookie<AuthCodeFuture>(
     creds: VRChatCredentials,
-    request_two_factor_auth_code: fn(VRChatCredentials, TwoFactorAuthMethod) -> AuthCodeFuture,
+    request_two_factor_auth_code: impl FnOnce(VRChatCredentials, TwoFactorAuthMethod) -> AuthCodeFuture,
 ) -> Result<VRChatCredentialsWithCookie>
 where
     AuthCodeFuture: Future<Output = Result<TwoFactorAuthCode>>,
@@ -79,7 +79,7 @@ where
 async fn authenticate_vrchat_user<AuthCodeFuture>(
     creds: &VRChatCredentials,
     vrchat_config: &VrcConfig,
-    request_two_factor_auth_code: fn(VRChatCredentials, TwoFactorAuthMethod) -> AuthCodeFuture,
+    request_two_factor_auth_code: impl FnOnce(VRChatCredentials, TwoFactorAuthMethod) -> AuthCodeFuture,
 ) -> Result<()>
 where
     AuthCodeFuture: Future<Output = Result<TwoFactorAuthCode>>,
@@ -248,7 +248,7 @@ impl TwoFactorAuthMethod {
     }
 }
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TwoFactorAuthCode(String);
 
 impl From<TwoFactorAuthCode> for String {

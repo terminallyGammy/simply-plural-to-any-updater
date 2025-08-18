@@ -9,6 +9,8 @@ export APPLICATION_USER_SECRETS="some-app-user-secret"
 export SECONDS_BETWEEN_UPDATES=10
 export SYSTEM_PUBLIC_NAME=ayake-test
 
+source docker/source.sh # await
+
 get_user_config_json() {
 
     if [ -v DISCORD_TOKEN ] ; then 
@@ -88,12 +90,16 @@ setup_test_user() {
         -d "$JSON" \
         "$BASE_URL/api/user/config"
 
-    # set -x
-    # start updaters
+    echo "Restarting updaters ..."
+    curl -s --fail-with-body \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $JWT" \
+        -d "$JSON" \
+        "$BASE_URL/api/updaters/restart"
+
     # check status
 
-    # set +x
-    # return 1
+    await sp2any-webserver "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..."
 
     echo "Test user setup complete."
 }

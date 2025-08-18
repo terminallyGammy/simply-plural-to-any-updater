@@ -122,15 +122,15 @@ check_discord_status_string_equals() {
 }
 
 check_updater_has_no_errors() {
-    [[ "$( grep "Error" .log | wc -l )" == "0" ]]
+    [[ "$( docker logs sp2any-webserver 2>&1 | grep "Error" | wc -l )" == "0" ]]
 }
 
 check_updater_loop_continues() {
-    grep -q "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..." .log
+    docker logs sp2any-webserver 2>&1 | grep -q "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..."
 }
 
 check_updater_failure() {
-    grep -q "Error" .log
+    docker logs sp2any-webserver 2>&1 | grep -q "Error"
 }
 
 

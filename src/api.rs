@@ -60,6 +60,7 @@ pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
     Ok(())
 }
 
+// TODO. BUG!!! THIS DOESN'T WORK!!!!
 async fn restart_all_user_updaters_for_app_startups(setup: ApplicationSetup) -> Result<()> {
     eprintln!("Starting all user updaters ...");
 

@@ -203,7 +203,7 @@ impl From<(&DecryptedDbSecret, &DecryptedDbSecret, &DecryptedDbSecret)>
     }
 }
 
-#[derive(Clone, Deserialize, Display, Debug)]
+#[derive(Clone, Serialize, Deserialize, Display, Debug)]
 pub enum TwoFactorAuthMethod {
     TwoFactorAuthMethodEmail,
     TwoFactorAuthMethodApp,

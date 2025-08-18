@@ -24,7 +24,6 @@ use crate::updater_manager::ThreadSafePerUserNew;
 use crate::vrchat_auth;
 use crate::vrchat_auth::TwoFactorAuthCode;
 use crate::vrchat_auth::TwoFactorAuthMethod;
-use crate::vrchat_auth::VRChatCredentials;
 use crate::webview;
 use anyhow::anyhow;
 use anyhow::Result;
@@ -250,18 +249,18 @@ async fn vrchat_user_authentication_request(
     creds: Json<vrchat_auth::VRChatCredentials>,
     jwt: ResponseResult<Jwt>,
     tmp_vrchat_auth_code_state: &State<VRChatAuthCodeState>,
-) -> ResponseResult<()> {
+) -> ResponseResult<Json<TwoFactorAuthMethod>> {
     let user_id = jwt?.user_id()?;
     let creds = creds.into_inner();
 
     let (tfa_promise, tfa_future) = oneshot::channel();
     let (method_promise, method_future) = oneshot::channel();
+    let (valid_creds_promise, valid_creds_future) = oneshot::channel();
 
     let () = insert_channels(
         &user_id,
-        &creds,
         tmp_vrchat_auth_code_state,
-        method_future,
+        valid_creds_future,
         tfa_promise,
     )
     .await?;
@@ -276,25 +275,49 @@ async fn vrchat_user_authentication_request(
         Ok(code)
     };
 
-    let _ = vrchat_auth::authenticate_vrchat_for_new_cookie(creds, request_two_factor_auth_code)
-        .await?;
+    let valid_creds =
+        vrchat_auth::authenticate_vrchat_for_new_cookie(creds, request_two_factor_auth_code)
+            .await?;
 
-    todo!();
+    // read the required auth method.
+    // let lock1 = tmp_vrchat_auth_code_state
+    //     .lock()
+    //     .map_err(|e| response::Debug(anyhow!("Lock error: {e}")))?;
+
+    // let (_,method_fut,_) = lock1
+    //     .get(&user_id)
+    //     .ok_or_else(|| response::Debug(anyhow!("Empty Option.")))?
+    //     .lock()
+    //     .map_err(|e| response::Debug(anyhow!("Lock error: {e}")))?;
+
+    let method = method_future
+        .await
+        .map_err(|e| response::Debug(anyhow!(e)))?;
+
+    let () = valid_creds_promise
+        .send(valid_creds)
+        .map_err(|_| response::Debug(anyhow!("Send failed!")))?;
+
+    Ok(Json(method))
 }
 
+/*
+THIS IS A MESS!!!! WE NEED TO FIX THIS AND IMPLEMENT IT MUCH DIFFERENTLY!
+We need to split authenticate_vrchat_user and then it should work!
+*/
+
 pub type VRChatAuthCodeState = ThreadSafePerUserNew<(
-    VRChatCredentials,
-    oneshot::Receiver<TwoFactorAuthMethod>,
-    oneshot::Sender<TwoFactorAuthCode>,
+    oneshot::Receiver<vrchat_auth::VRChatCredentialsWithCookie>,
+    Option<oneshot::Sender<TwoFactorAuthCode>>,
 )>;
+
 async fn insert_channels(
     user_id: &UserId,
-    creds: &vrchat_auth::VRChatCredentials,
     tmp_vrchat_auth_code_state: &VRChatAuthCodeState,
-    method_future: oneshot::Receiver<TwoFactorAuthMethod>,
+    valid_creds_future: oneshot::Receiver<vrchat_auth::VRChatCredentialsWithCookie>,
     tfa_promise: oneshot::Sender<TwoFactorAuthCode>,
 ) -> ResponseResult<()> {
-    let arc_mut_tuple = Arc::new(Mutex::new((creds.clone(), method_future, tfa_promise)));
+    let arc_mut_tuple = Arc::new(Mutex::new((valid_creds_future, Some(tfa_promise))));
 
     tmp_vrchat_auth_code_state
         .lock()
@@ -314,29 +337,39 @@ async fn vrchat_user_authentication_resolve(
     let user_id = jwt?.user_id()?;
     let tfa_code = tfa_code.into_inner();
 
-    // let t = {
-    //     let hm = tmp_vrchat_auth_code_state
-    //         .lock()
-    //         .map_err(|e| response::Debug(anyhow!("Lock error: {e}")))?;
+    todo!()
 
-    //     let tuple = hm
-    //         .get(&user_id)
-    //         .ok_or_else(|| anyhow!("No channels for userid found. {}", &user_id))?;
+    // let creds = resolve_workflow(&user_id, tfa_code, tmp_vrchat_auth_code_state)
+    //     .await
+    //     .map_err(response::Debug)?;
 
-    //     let mut t = tuple.lock();
+    // Ok(Json(creds))
+}
 
-    //     let mut t2 = t.as_deref_mut().map_err(|e| anyhow!("Error: {e}"))?;
+async fn resolve_workflow(
+    user_id: &UserId,
+    tfa_code: TwoFactorAuthCode,
+    tmp_vrchat_auth_code_state: &State<VRChatAuthCodeState>,
+) -> Result<vrchat_auth::VRChatCredentialsWithCookie> {
+    let hm = tmp_vrchat_auth_code_state
+        .lock()
+        .map_err(|e| anyhow!("Lock error: {e}"))?;
 
-    //     let creds = &t2.0;
-    //     let code_prom = &t2.2;
+    let tuple = hm
+        .get(user_id)
+        .ok_or_else(|| anyhow!("No channels for userid found. {}", &user_id))?;
 
-    //     todo!();
-    //     let cp = *code_prom;
+    let mut t = tuple.lock();
 
-    //     cp.send(tfa_code);
+    let (creds, code_prom) = t.as_deref_mut().map_err(|e| anyhow!("Error: {e}"))?;
 
-    //     creds.clone()
-    // };
+    let cp_opt = code_prom.take();
 
-    todo!();
+    let cp = cp_opt.ok_or_else(|| anyhow!("No sender found!"))?;
+
+    let () = cp.send(tfa_code).map_err(|_| anyhow!("Send error."))?;
+
+    let creds = creds.await.map_err(|e| anyhow!(e))?;
+
+    Ok(creds)
 }

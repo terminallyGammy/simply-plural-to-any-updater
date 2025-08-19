@@ -126,6 +126,7 @@ The strategy is to make your Rust code the single source of truth for any data s
 
 ### TODO
 
+* add status not only for updaters but also for SP itself.
 * Add automatic sync to PluralKit
 * complete migration to webapp
 * add `enable_website` config

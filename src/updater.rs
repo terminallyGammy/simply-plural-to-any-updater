@@ -14,10 +14,8 @@ pub enum Platform {
 #[derive(Clone, Serialize, strum_macros::Display)]
 pub enum UpdaterStatus {
     Inactive,
-    Paused,
     Running,
     Error(String),
-    Unknown,
 }
 
 pub enum Updater {

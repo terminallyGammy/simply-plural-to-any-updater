@@ -60,8 +60,9 @@ export -f get_user_config_json
 
 setup_test_user() {
     echo "Creating user ..."
+    EMAIL="test@example.com"
     JSON="{
-        \"email\": { \"inner\": \"test@example.com\" },
+        \"email\": { \"inner\": \"$EMAIL\" },
         \"password\": { \"inner\": \"m?3yp%&wdS+\" }
     }"
     curl -s --fail-with-body \
@@ -90,7 +91,15 @@ setup_test_user() {
         -d "$JSON" \
         "$BASE_URL/api/user/config"
 
-    # check status
+    echo "Getting user info ..."
+    USER_INFO="$(
+        curl -s --fail-with-body \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $JWT" \
+            "$BASE_URL/api/user/info"
+    )"
+    [[ "$( echo "$USER_INFO" | jq -r .id.inner )" == "$USER_ID" ]]
+    [[ "$( echo "$USER_INFO" | jq -r .email.inner )" == "$EMAIL" ]]
 
     echo "Test user setup complete."
 }

@@ -4,10 +4,8 @@ use sqlx::{FromRow, PgPool};
 
 use crate::{
     config::UserConfigDbEntries,
-    model::{
-        self, DecryptedDbSecret, Email, EncryptedDbSecret, PasswordHashString, UserId,
-        ValidConstraints,
-    },
+    database_constraints,
+    model::{self, DecryptedDbSecret, Email, EncryptedDbSecret, PasswordHashString, UserId},
 };
 
 pub async fn create_user(
@@ -69,7 +67,7 @@ pub async fn get_user(
 pub async fn set_user_config_secrets(
     db_pool: &PgPool,
     user_id: UserId,
-    config: UserConfigDbEntries<DecryptedDbSecret, ValidConstraints>,
+    config: UserConfigDbEntries<DecryptedDbSecret, database_constraints::ValidConstraints>,
     application_user_secret: &model::ApplicationUserSecrets,
 ) -> Result<()> {
     let secrets_key = compute_user_secrets_key(&user_id, application_user_secret);
@@ -121,7 +119,7 @@ pub async fn get_user_secrets(
     db_pool: &PgPool,
     user_id: &UserId,
     application_user_secret: &model::ApplicationUserSecrets,
-) -> Result<UserConfigDbEntries<DecryptedDbSecret, ValidConstraints>> {
+) -> Result<UserConfigDbEntries<DecryptedDbSecret, database_constraints::ValidConstraints>> {
     let secrets_key = compute_user_secrets_key(user_id, application_user_secret);
 
     sqlx::query_as(
@@ -200,5 +198,5 @@ pub struct UserInfo {
     pub id: model::UserId,
     pub email: model::Email,
     pub password_hash: model::PasswordHashString,
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }

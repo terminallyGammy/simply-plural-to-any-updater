@@ -23,7 +23,6 @@ const VRCHAT_UPDATER_USER_AGENT: &str = concat!(
     "gmail.com"
 );
 
-type VrcCookieStore = Arc<reqwest::cookie::Jar>;
 const VRCHAT_COOKIE_URL: &str = "https://api.vrchat.cloud";
 
 /* Called in updater. Cookie is only validated, no new cookie is created. */
@@ -92,7 +91,7 @@ pub async fn authenticate_vrchat_for_new_cookie_with_2fa(
 
 fn new_vrchat_config_with_basic_auth_and_optional_cookie(
     creds: Either<&VRChatCredentials, &VRChatCredentialsWithCookie>,
-) -> Result<(VrcConfig, VrcCookieStore)> {
+) -> Result<(VrcConfig, Arc<reqwest::cookie::Jar>)> {
     let cookie_store = Arc::new(cookie::Jar::default());
     let cookie_url = &Url::from_str(VRCHAT_COOKIE_URL)?;
 

@@ -1,13 +1,12 @@
 use crate::auth;
-use crate::auth::Jwt;
-use crate::auth::JwtString;
 use crate::config;
 use crate::config::UserConfigDbEntries;
 use crate::database;
-use crate::database::get_all_users;
+use crate::jwt;
 use crate::model::ApplicationJwtSecret;
 use crate::model::ApplicationUserSecrets;
 use crate::model::DecryptedDbSecret;
+use crate::model::Email;
 use crate::model::EncryptedDbSecret;
 use crate::model::UserId;
 use crate::model::UserLoginCredentials;
@@ -26,6 +25,8 @@ use rocket::{
     serde::json::Json,
     State,
 };
+use serde::Deserialize;
+use serde::Serialize;
 use sqlx::PgPool;
 
 type ResponseResult<T> = Result<T, response::Debug<anyhow::Error>>;
@@ -47,6 +48,7 @@ pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
                 restart_updaters,
                 register,
                 login,
+                get_user_info,
                 get_config,
                 set_config,
                 vrchat_user_authentication_request,
@@ -63,7 +65,7 @@ pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
 async fn restart_all_user_updaters_for_app_startups(setup: ApplicationSetup) -> Result<()> {
     eprintln!("Starting all user updaters ...");
 
-    let all_users = get_all_users(&setup.db_pool).await?;
+    let all_users = database::get_all_users(&setup.db_pool).await?;
 
     eprintln!("Users: {all_users:?}");
 
@@ -86,7 +88,7 @@ async fn restart_all_user_updaters_for_app_startups(setup: ApplicationSetup) -> 
 #[get("/updaters/status")]
 fn get_updaters_status(
     shared_updaters: &State<updater_manager::SharedUpdaters>,
-    jwt: ResponseResult<Jwt>,
+    jwt: ResponseResult<jwt::Jwt>,
 ) -> ResponseResult<Json<updater_loop::UserUpdatersStatuses>> {
     let user_id = jwt?.user_id()?;
 
@@ -98,7 +100,7 @@ fn get_updaters_status(
 
 #[post("/updaters/restart")]
 async fn restart_updaters(
-    jwt: ResponseResult<Jwt>,
+    jwt: ResponseResult<jwt::Jwt>,
     db_pool: &State<PgPool>,
     application_user_secrets: &State<ApplicationUserSecrets>,
     client: &State<reqwest::Client>,
@@ -190,7 +192,7 @@ async fn login(
     db_pool: &State<PgPool>,
     jwt_app_secret: &State<ApplicationJwtSecret>,
     credentials: Json<UserLoginCredentials>,
-) -> Result<Json<JwtString>, response::Debug<anyhow::Error>> {
+) -> Result<Json<jwt::JwtString>, response::Debug<anyhow::Error>> {
     let user_id = database::get_user_id(db_pool, credentials.email.clone()).await?;
 
     let user_info = database::get_user_info(db_pool, user_id)
@@ -204,10 +206,45 @@ async fn login(
 }
 // todo. how can we enable users to reset their password? Do I really have to do this all manually here???
 
+#[get("/user/info")]
+async fn get_user_info(
+    db_pool: &State<PgPool>,
+    jwt: ResponseResult<jwt::Jwt>,
+) -> ResponseResult<Json<UserInfoUI>> {
+    let user_id = jwt?.user_id()?;
+    let user_info = database::get_user_info(db_pool, user_id)
+        .await
+        .map_err(response::Debug)?;
+    Ok(Json(user_info.into()))
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UserInfoUI {
+    pub id: UserId,
+    pub email: Email,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<database::UserInfo> for UserInfoUI {
+    fn from(user: database::UserInfo) -> Self {
+        let database::UserInfo {
+            id,
+            email,
+            password_hash: _,
+            created_at,
+        } = user;
+        Self {
+            id,
+            email,
+            created_at,
+        }
+    }
+}
+
 #[get("/user/config")]
 async fn get_config(
     db_pool: &State<PgPool>,
-    jwt: ResponseResult<Jwt>,
+    jwt: ResponseResult<jwt::Jwt>,
 ) -> ResponseResult<Json<UserConfigDbEntries<EncryptedDbSecret>>> {
     let user_id = jwt?.user_id()?;
 
@@ -219,7 +256,7 @@ async fn get_config(
 #[post("/user/config", data = "<config>")]
 async fn set_config(
     config: Json<UserConfigDbEntries<DecryptedDbSecret>>,
-    jwt: ResponseResult<Jwt>,
+    jwt: ResponseResult<jwt::Jwt>,
     db_pool: &State<PgPool>,
     app_user_secrets: &State<ApplicationUserSecrets>,
     client: &State<reqwest::Client>,
@@ -239,7 +276,7 @@ async fn set_config(
 #[post("/user/platform/vrchat/auth_2fa/request", data = "<creds>")]
 async fn vrchat_user_authentication_request(
     creds: Json<vrchat_auth::VRChatCredentials>,
-    _jwt: ResponseResult<Jwt>, // request should be authenticated, but we don't need user id
+    _jwt: ResponseResult<jwt::Jwt>, // request should be authenticated, but we don't need user id
 ) -> ResponseResult<
     Json<Either<vrchat_auth::VRChatCredentialsWithCookie, vrchat_auth::TwoFactorAuthMethod>>,
 > {
@@ -252,7 +289,7 @@ async fn vrchat_user_authentication_request(
 
 #[post("/user/platform/vrchat/auth_2fa/resolve", data = "<creds_with_tfa>")]
 async fn vrchat_user_authentication_resolve(
-    _jwt: ResponseResult<Jwt>, // request should be authenticated, but we don't need user id
+    _jwt: ResponseResult<jwt::Jwt>, // request should be authenticated, but we don't need user id
     creds_with_tfa: Json<vrchat_auth::VRChatCredentialsWithTwoFactorAuth>,
 ) -> ResponseResult<Json<vrchat_auth::VRChatCredentialsWithCookie>> {
     let creds_with_tfa = creds_with_tfa.into_inner();

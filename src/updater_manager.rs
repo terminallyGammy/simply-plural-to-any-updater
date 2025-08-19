@@ -40,20 +40,22 @@ impl SharedUpdaters {
         user_id: &UserId,
         updater_state: updater_loop::UserUpdatersStatuses,
     ) -> Result<()> {
-        let mut locked_updater_states = self.statuses.lock().map_err(|e| anyhow!(e.to_string()))?;
-
-        locked_updater_states.insert(user_id.to_owned(), updater_state);
+        self.statuses
+            .lock()
+            .map_err(|e| anyhow!(e.to_string()))?
+            .insert(user_id.to_owned(), updater_state);
 
         Ok(())
     }
 
+    #[allow(clippy::significant_drop_tightening)]
     pub fn restart_updater(&self, user_id: &UserId, config: UserConfigForUpdater) -> Result<()> {
         let mut locked_task = self.tasks.lock().map_err(|e| anyhow!(e.to_string()))?;
 
         eprintln!("Aborting updater {user_id}");
         let _ = locked_task.get(user_id).map(tokio::task::JoinHandle::abort);
 
-        let owned_self = self.clone();
+        let owned_self = self.to_owned();
         let new_task = tokio::spawn(async move {
             updater_loop::run_loop(config, owned_self).await;
         });

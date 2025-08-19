@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 
     email VARCHAR(127) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
     wait_seconds INTEGER CHECK (wait_seconds > 0),
     request_timeout INTEGER CHECK (request_timeout > 0),

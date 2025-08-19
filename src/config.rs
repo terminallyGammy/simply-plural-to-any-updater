@@ -2,12 +2,8 @@ use anyhow::{anyhow, Result};
 use sqlx::FromRow;
 
 use crate::{
-    config_value, config_value_if,
-    model::{
-        self, only_use_this_function_to_mark_validation_after_you_have_actually_validated_it,
-        ConstraintsType, DecryptedDbSecret, InvalidConstraints, SecretType, UserId,
-        ValidConstraints,
-    },
+    config_value, config_value_if, database_constraints,
+    model::{self, DecryptedDbSecret, SecretType, UserId},
 };
 use serde::{Deserialize, Serialize};
 
@@ -16,10 +12,10 @@ use sp2any_macros::WithOptionDefaults;
 #[derive(
     Default, Debug, Clone, Serialize, Deserialize, WithOptionDefaults, FromRow, PartialEq, Eq,
 )]
-pub struct UserConfigDbEntries<Secret, Constraints = InvalidConstraints>
+pub struct UserConfigDbEntries<Secret, Constraints = database_constraints::InvalidConstraints>
 where
     Secret: SecretType,
-    Constraints: ConstraintsType,
+    Constraints: database_constraints::ConstraintsType,
 {
     #[serde(skip)]
     pub valid_constraints: Option<Constraints>,
@@ -86,14 +82,14 @@ pub fn create_config_with_strong_constraints<Constraints>(
     db_config: &UserConfigDbEntries<DecryptedDbSecret, Constraints>,
 ) -> Result<(
     UserConfigForUpdater,
-    UserConfigDbEntries<DecryptedDbSecret, ValidConstraints>,
+    UserConfigDbEntries<DecryptedDbSecret, database_constraints::ValidConstraints>,
 )>
 where
-    Constraints: ConstraintsType,
+    Constraints: database_constraints::ConstraintsType,
 {
     eprintln!("Loading config ...");
 
-    let db_config = model::downgrade(db_config);
+    let db_config = database_constraints::downgrade(db_config);
     let local_config_with_defaults = db_config.with_option_defaults(default_user_db_entries());
 
     let enable_discord = config_value!(local_config_with_defaults, enable_discord)?;
@@ -144,7 +140,7 @@ where
     }
 
     let valid_config =
-        only_use_this_function_to_mark_validation_after_you_have_actually_validated_it(&db_config);
+        database_constraints::only_use_this_function_to_mark_validation_after_you_have_actually_validated_it(&db_config);
 
     Ok((config, valid_config))
 }

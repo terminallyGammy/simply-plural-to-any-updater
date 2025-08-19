@@ -127,7 +127,6 @@ The strategy is to make your Rust code the single source of truth for any data s
 ### TODO
 
 * Add automatic sync to PluralKit
-* Test that discord and vrchat updater work independently of each other
 * complete migration to webapp
 * add `enable_website` config
 * Rename 'VRChat Status Name' field to 'SP2Any Simple Name' field
@@ -139,8 +138,8 @@ The strategy is to make your Rust code the single source of truth for any data s
 * test vrchat login: user+pwd and user+pwd+2fa
 
 #### User Feedback
-* discord rich presence / activity as additonal option instead of status only
-* sync from and to pluralkit as well (checkout pk-rpc)
+* discord rich presence / activity as instead of discord status
+* sync from and to pluralkit as well (checkout pk-rpc). most SP -> PK
 * add a warning, that using the discord self-botting comes with a risk for both the user and the dev
   * [artcle by discord](https://support.discord.com/hc/en-us/articles/115002192352-Automated-User-Accounts-Self-Bots)
   * [self-botting](https://gist.github.com/nomsi/2684f5692cad5b0ceb52e308631859fd)

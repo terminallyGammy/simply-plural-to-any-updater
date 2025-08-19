@@ -14,10 +14,6 @@ set -euo pipefail
 
 [[ "$DISCORD_TOKEN" != "" ]]
 
-FUNCTIONAL_DISCORD_TOKEN="$DISCORD_TOKEN"
-FUNCTIONAL_VRCHAT_USERNAME="$VRCHAT_USERNAME"
-FUNCTIONAL_SPS_API_TOKEN="$SPS_API_TOKEN"
-
 ENABLE_DISCORD=true
 ENABLE_VRCHAT=true
 
@@ -38,38 +34,6 @@ main() {
 
 
     stop_updater
-    setup_sp_rest_failure
-    start_updater
-    check_updater_failure
-    check_updater_loop_continues
-    reset_changed_variables
-
-
-    stop_updater
-    setup_vrchat_only
-    start_updater
-    check_updater_has_no_errors
-    check_updater_loop_continues
-    reset_changed_variables
-
-
-    stop_updater
-    setup_discord_only
-    start_updater
-    check_updater_has_no_errors
-    check_updater_loop_continues
-    reset_changed_variables
-
-
-    stop_updater
-    setup_vrchat_misconfigured
-    start_updater
-    check_updater_failure
-    check_updater_loop_continues
-    reset_changed_variables
-
-
-    stop_updater
     clear_all_fronts
     echo "✅✅✅ Updater Integration Test ✅✅✅"
 }
@@ -77,6 +41,7 @@ main() {
 
 check_system_fronts_set() {
     SET="$1"
+    echo "check_system_fronts_set '$SET'"
 
     if [[ "$SET" == "A" ]]; then
         check_vrc_status_string_equals "F˸Ann‚Bor‚Dae‚Cst"
@@ -121,61 +86,25 @@ check_discord_status_string_equals() {
     [[ "$STATUS" == "$EXPECTED" ]]
 }
 
-check_updater_has_no_errors() {
-    [[ "$( docker logs sp2any-webserver 2>&1 | grep "Error" | wc -l )" == "0" ]]
-}
-
-check_updater_loop_continues() {
-    docker logs sp2any-webserver 2>&1 | grep -q "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..."
-}
-
-check_updater_failure() {
-    docker logs sp2any-webserver 2>&1 | grep -q "Error"
-}
-
-
-
-setup_sp_rest_failure() {
-    SPS_API_TOKEN="invalid"
-}
-
-setup_vrchat_only() {
-    DISCORD_TOKEN="invalid"
-    ENABLE_DISCORD=false
-}
-
-setup_discord_only() {
-    VRCHAT_USERNAME="invalid"
-    ENABLE_VRCHAT=false
-}
-
-setup_vrchat_misconfigured() {
-    VRCHAT_USERNAME="invalid"
-    # VRCHAT enabled!
-}
-
-
-reset_changed_variables() {
-    DISCORD_TOKEN="$FUNCTIONAL_DISCORD_TOKEN"
-    VRCHAT_USERNAME="$FUNCTIONAL_VRCHAT_USERNAME"
-    SPS_API_TOKEN="$FUNCTIONAL_SPS_API_TOKEN"
-    ENABLE_DISCORD=true
-    ENABLE_VRCHAT=true
-}
-
 
 export BASE_URL="http://localhost:8000"
 
 start_updater() {
-    ./docker/local.start.sh
+    echo "start_updater"
+    ./docker/local.start.sh > /dev/null 2>&1
 
     setup_test_user
+
+    restart_updaters
+
+    await sp2any-webserver "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..."
 
     echo "Started Updater."
 }
 
 stop_updater() {
-    ./docker/local.stop.sh
+    echo "stop_updater"
+    ./docker/local.stop.sh > /dev/null 2>&1
     echo "Stopped Updater."
 }
 trap stop_updater EXIT

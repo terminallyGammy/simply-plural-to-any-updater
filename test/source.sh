@@ -90,17 +90,17 @@ setup_test_user() {
         -d "$JSON" \
         "$BASE_URL/api/user/config"
 
+    # check status
+
+    echo "Test user setup complete."
+}
+
+restart_updaters() {
     echo "Restarting updaters ..."
     curl -s --fail-with-body \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $JWT" \
         -d "$JSON" \
         "$BASE_URL/api/updaters/restart"
-
-    # check status
-
-    await sp2any-webserver "Waiting ${SECONDS_BETWEEN_UPDATES}s for next update trigger..."
-
-    echo "Test user setup complete."
 }
 

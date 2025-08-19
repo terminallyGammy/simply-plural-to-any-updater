@@ -58,13 +58,17 @@ runs:
       if: ${{ inputs.SKIP_TESTS }} == 'false'
       run: ./test/unit-tests.sh
 
-    - name: Webserver Integration Tests
+    - name: Startup Integration Tests
       shell: bash
       if: ${{ inputs.SKIP_TESTS }} == 'false'
       env:
         SPS_API_TOKEN: ${{ inputs.SPS_API_TOKEN }}
         SPS_API_WRITE_TOKEN: ${{ inputs.SPS_API_WRITE_TOKEN }}
-      run: ./test/webserver.integration-tests.sh
+        DISCORD_TOKEN: ${{inputs.DISCORD_TOKEN}}
+        VRCHAT_USERNAME: ${{ inputs.VRCHAT_USERNAME }}
+        VRCHAT_PASSWORD: ${{ inputs.VRCHAT_PASSWORD }}
+        VRCHAT_COOKIE: ${{ inputs.VRCHAT_COOKIE }}
+      run: ./test/startup.integration-tests.sh
 
     - name: Updater Integration Tests
       shell: bash
@@ -77,6 +81,14 @@ runs:
         VRCHAT_PASSWORD: ${{ inputs.VRCHAT_PASSWORD }}
         VRCHAT_COOKIE: ${{ inputs.VRCHAT_COOKIE }}
       run: ./test/updater.integration-tests.sh
+
+    - name: Webserver Integration Tests
+      shell: bash
+      if: ${{ inputs.SKIP_TESTS }} == 'false'
+      env:
+        SPS_API_TOKEN: ${{ inputs.SPS_API_TOKEN }}
+        SPS_API_WRITE_TOKEN: ${{ inputs.SPS_API_WRITE_TOKEN }}
+      run: ./test/webserver.integration-tests.sh
 
     - name: Lint
       shell: bash

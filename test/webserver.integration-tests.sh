@@ -63,9 +63,11 @@ unset VRCHAT_PASSWORD
 unset VRCHAT_COOKIE
 
 start_webserver() {
+    echo "start_webserver"
+
     set -a; source release/config/server.defaults.env; set +a
 
-    ./docker/local.start.sh
+    ./docker/local.start.sh > /dev/null 2>&1
 
     setup_test_user
 
@@ -73,7 +75,8 @@ start_webserver() {
 }
 
 stop_webserver() {
-    ./docker/local.stop.sh
+    echo "stop_webserver"
+    ./docker/local.stop.sh > /dev/null 2>&1
     echo "Stopped webserver."
 }
 trap stop_webserver EXIT

@@ -43,7 +43,7 @@ pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
             "/api",
             routes![
                 rest_get_fronting,
-                get_updaters_state,
+                get_updaters_status,
                 restart_updaters,
                 register,
                 login,
@@ -83,8 +83,8 @@ async fn restart_all_user_updaters_for_app_startups(setup: ApplicationSetup) -> 
     Ok(())
 }
 
-#[get("/updaters/state")]
-fn get_updaters_state(
+#[get("/updaters/status")]
+fn get_updaters_status(
     shared_updaters: &State<updater_manager::SharedUpdaters>,
     jwt: ResponseResult<Jwt>,
 ) -> ResponseResult<Json<updater_loop::UserUpdatersStatuses>> {

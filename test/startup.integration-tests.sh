@@ -33,7 +33,10 @@ main() {
     start_updater
     check_updater_failure
     check_updater_loop_continues
+    check_updater "Discord" "Running"
+    check_updater "VRChat" "Running"
     reset_changed_variables
+    
 
 
     stop_updater
@@ -41,6 +44,8 @@ main() {
     start_updater
     check_updater_has_no_errors
     check_updater_loop_continues
+    check_updater "Discord" "Inactive"
+    check_updater "VRChat" "Running"
     reset_changed_variables
 
 
@@ -49,6 +54,8 @@ main() {
     start_updater
     check_updater_has_no_errors
     check_updater_loop_continues
+    check_updater "Discord" "Running"
+    check_updater "VRChat" "Inactive"
     reset_changed_variables
 
 
@@ -57,6 +64,8 @@ main() {
     start_updater
     check_updater_failure
     check_updater_loop_continues
+    check_updater "Discord" "Running"
+    get_updater_statuses | jq -r ".VRChat" | grep -q "Error"
     reset_changed_variables
 
 
@@ -79,6 +88,14 @@ check_updater_loop_continues() {
 check_updater_failure() {
     echo "check_updater_failure"
     docker logs sp2any-webserver 2>&1 | grep -q "Error"
+}
+
+check_updater() {
+    PLATFORM="$1"
+    STATUS="$2"
+    echo "Check $PLATFORM is $STATUS ?"
+    RES="$( get_updater_statuses | jq ".$PLATFORM == \"$STATUS\"" )"
+    [[ "$RES" == "true" ]]    
 }
 
 

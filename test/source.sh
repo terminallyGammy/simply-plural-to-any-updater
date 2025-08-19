@@ -104,3 +104,10 @@ restart_updaters() {
         "$BASE_URL/api/updaters/restart"
 }
 
+get_updater_statuses() {
+    curl -s --fail-with-body \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $JWT" \
+        "$BASE_URL/api/updaters/status"
+}
+export -f get_updater_statuses

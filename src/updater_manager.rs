@@ -47,7 +47,6 @@ impl SharedUpdaters {
         Ok(())
     }
 
-    // todo. does this mean, that we block the global hashmap as long as this abort is happening???
     pub fn restart_updater(&self, user_id: &UserId, config: UserConfigForUpdater) -> Result<()> {
         let mut locked_task = self.tasks.lock().map_err(|e| anyhow!(e.to_string()))?;
 

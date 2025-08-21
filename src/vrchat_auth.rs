@@ -1,5 +1,5 @@
 use crate::config::UserConfigForUpdater;
-use crate::model::DecryptedDbSecret;
+use crate::db_secret;
 
 use anyhow::{anyhow, Result};
 use either::Either;
@@ -172,11 +172,19 @@ impl From<(&VRChatCredentials, &str)> for VRChatCredentialsWithCookie {
     }
 }
 
-impl From<(&DecryptedDbSecret, &DecryptedDbSecret, &DecryptedDbSecret)>
-    for VRChatCredentialsWithCookie
+impl
+    From<(
+        &db_secret::Decrypted,
+        &db_secret::Decrypted,
+        &db_secret::Decrypted,
+    )> for VRChatCredentialsWithCookie
 {
     fn from(
-        (username, password, cookie): (&DecryptedDbSecret, &DecryptedDbSecret, &DecryptedDbSecret),
+        (username, password, cookie): (
+            &db_secret::Decrypted,
+            &db_secret::Decrypted,
+            &db_secret::Decrypted,
+        ),
     ) -> Self {
         (
             username.secret.as_str(),

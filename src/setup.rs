@@ -1,4 +1,5 @@
-use crate::model;
+use crate::db_secret;
+use crate::jwt;
 use crate::updater_manager;
 use anyhow::Result;
 use clap::Parser;
@@ -17,11 +18,11 @@ pub async fn application_setup(cli_args: &CliArgs) -> Result<ApplicationSetup> {
         .timeout(Duration::from_secs(cli_args.request_timeout))
         .build()?;
 
-    let jwt_secret = model::ApplicationJwtSecret {
+    let jwt_secret = jwt::ApplicationJwtSecret {
         inner: cli_args.jwt_application_secret.clone(),
     };
 
-    let application_user_secrets = model::ApplicationUserSecrets {
+    let application_user_secrets = db_secret::ApplicationUserSecrets {
         inner: cli_args.application_user_secrets.clone(),
     };
 
@@ -56,7 +57,7 @@ pub struct CliArgs {
 pub struct ApplicationSetup {
     pub db_pool: sqlx::PgPool,
     pub client: reqwest::Client,
-    pub jwt_secret: model::ApplicationJwtSecret,
-    pub application_user_secrets: model::ApplicationUserSecrets,
+    pub jwt_secret: jwt::ApplicationJwtSecret,
+    pub application_user_secrets: db_secret::ApplicationUserSecrets,
     pub shared_updaters: updater_manager::SharedUpdaters,
 }

@@ -8,7 +8,12 @@ use rocket::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::model::{ApplicationJwtSecret, UserId};
+use crate::model::UserId;
+
+#[derive(Clone)]
+pub struct ApplicationJwtSecret {
+    pub inner: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Jwt {

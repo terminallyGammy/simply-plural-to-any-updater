@@ -1,6 +1,6 @@
 use sqlx::{error::BoxDynError, postgres, Decode, FromRow, Postgres};
 
-use crate::{config::UserConfigDbEntries, model::SecretType};
+use crate::{config::UserConfigDbEntries, db_secret};
 use anyhow::anyhow;
 
 pub trait ConstraintsType: Clone {}
@@ -63,7 +63,7 @@ impl<'r> Decode<'r, Postgres> for InvalidConstraints {
     }
 }
 
-pub fn downgrade<Secret: SecretType, C: ConstraintsType>(
+pub fn downgrade<Secret: db_secret::SecretType, C: ConstraintsType>(
     value: &UserConfigDbEntries<Secret, C>,
 ) -> UserConfigDbEntries<Secret, InvalidConstraints> {
     UserConfigDbEntries {
@@ -84,7 +84,7 @@ pub fn downgrade<Secret: SecretType, C: ConstraintsType>(
 }
 
 pub fn only_use_this_function_to_mark_validation_after_you_have_actually_validated_it<
-    Secret: SecretType,
+    Secret: db_secret::SecretType,
 >(
     value: &UserConfigDbEntries<Secret, InvalidConstraints>,
 ) -> UserConfigDbEntries<Secret, ValidConstraints> {

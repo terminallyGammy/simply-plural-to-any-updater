@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use sqlx::FromRow;
 
 use crate::{
-    config_value, config_value_if, database_constraints,
-    model::{self, DecryptedDbSecret, SecretType, UserId},
+    config_value, config_value_if, db_constraints, db_secret,
+    model::{self, UserId},
 };
 use serde::{Deserialize, Serialize};
 
@@ -12,10 +12,10 @@ use sp2any_macros::WithOptionDefaults;
 #[derive(
     Default, Debug, Clone, Serialize, Deserialize, WithOptionDefaults, FromRow, PartialEq, Eq,
 )]
-pub struct UserConfigDbEntries<Secret, Constraints = database_constraints::InvalidConstraints>
+pub struct UserConfigDbEntries<Secret, Constraints = db_constraints::InvalidConstraints>
 where
-    Secret: SecretType,
-    Constraints: database_constraints::ConstraintsType,
+    Secret: db_secret::SecretType,
+    Constraints: db_constraints::ConstraintsType,
 {
     #[serde(skip)]
     pub valid_constraints: Option<Constraints>,
@@ -40,7 +40,7 @@ where
     pub vrchat_cookie: Option<Secret>,
 }
 
-pub fn default_user_db_entries<S: SecretType>() -> UserConfigDbEntries<S> {
+pub fn default_user_db_entries<S: db_secret::SecretType>() -> UserConfigDbEntries<S> {
     UserConfigDbEntries::<S> {
         status_prefix: Some(String::from("F:")),
         status_no_fronts: Some(String::from("none?")),
@@ -69,27 +69,27 @@ pub struct UserConfigForUpdater {
     pub enable_discord: bool,
     pub enable_vrchat: bool,
 
-    pub simply_plural_token: DecryptedDbSecret,
-    pub discord_token: DecryptedDbSecret,
-    pub vrchat_username: DecryptedDbSecret,
-    pub vrchat_password: DecryptedDbSecret,
-    pub vrchat_cookie: DecryptedDbSecret,
+    pub simply_plural_token: db_secret::Decrypted,
+    pub discord_token: db_secret::Decrypted,
+    pub vrchat_username: db_secret::Decrypted,
+    pub vrchat_password: db_secret::Decrypted,
+    pub vrchat_cookie: db_secret::Decrypted,
 }
 
 pub fn create_config_with_strong_constraints<Constraints>(
     user_id: &UserId,
     client: &reqwest::Client,
-    db_config: &UserConfigDbEntries<DecryptedDbSecret, Constraints>,
+    db_config: &UserConfigDbEntries<db_secret::Decrypted, Constraints>,
 ) -> Result<(
     UserConfigForUpdater,
-    UserConfigDbEntries<DecryptedDbSecret, database_constraints::ValidConstraints>,
+    UserConfigDbEntries<db_secret::Decrypted, db_constraints::ValidConstraints>,
 )>
 where
-    Constraints: database_constraints::ConstraintsType,
+    Constraints: db_constraints::ConstraintsType,
 {
     eprintln!("Loading config ...");
 
-    let db_config = database_constraints::downgrade(db_config);
+    let db_config = db_constraints::downgrade(db_config);
     let local_config_with_defaults = db_config.with_option_defaults(default_user_db_entries());
 
     let enable_discord = config_value!(local_config_with_defaults, enable_discord)?;
@@ -140,7 +140,7 @@ where
     }
 
     let valid_config =
-        database_constraints::only_use_this_function_to_mark_validation_after_you_have_actually_validated_it(&db_config);
+        db_constraints::only_use_this_function_to_mark_validation_after_you_have_actually_validated_it(&db_config);
 
     Ok((config, valid_config))
 }
@@ -149,11 +149,11 @@ where
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::model::DecryptedDbSecret;
+    use crate::db_secret::Decrypted;
 
     #[test]
     fn test_user_config_db_entries_serialization() {
-        let config = UserConfigDbEntries::<DecryptedDbSecret> {
+        let config = UserConfigDbEntries::<Decrypted> {
             wait_seconds: Some(30),
             system_name: Some("My System".to_string()),
             status_prefix: Some("SP:".to_string()),
@@ -161,10 +161,10 @@ mod tests {
             status_truncate_names_to: Some(5),
             enable_discord: Some(true),
             enable_vrchat: Some(false),
-            simply_plural_token: Some(DecryptedDbSecret {
+            simply_plural_token: Some(Decrypted {
                 secret: "sp_token_123".to_string(),
             }),
-            discord_token: Some(DecryptedDbSecret {
+            discord_token: Some(Decrypted {
                 secret: "discord_token_abc".to_string(),
             }),
             vrchat_username: None,

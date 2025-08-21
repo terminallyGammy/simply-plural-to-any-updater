@@ -4,11 +4,25 @@ use argon2::{
     Argon2, PasswordHash, PasswordVerifier,
 };
 
-use crate::{
-    database::UserInfo,
-    jwt,
-    model::{ApplicationJwtSecret, PasswordHashString, UserProvidedPassword},
-};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+
+use crate::{db::UserInfo, jwt};
+
+#[derive(Deserialize, Clone)]
+pub struct UserProvidedPassword {
+    pub inner: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow, sqlx::Type)]
+pub struct PasswordHashString {
+    pub inner: String,
+}
+impl From<String> for PasswordHashString {
+    fn from(val: String) -> Self {
+        Self { inner: val }
+    }
+}
 
 pub fn create_password_hash(password: &UserProvidedPassword) -> Result<PasswordHashString> {
     let salt = SaltString::generate(&mut OsRng);
@@ -25,7 +39,7 @@ pub fn create_password_hash(password: &UserProvidedPassword) -> Result<PasswordH
 pub fn verify_password_and_create_token(
     password: &UserProvidedPassword,
     user_info: &UserInfo,
-    jwt_secret: &ApplicationJwtSecret,
+    jwt_secret: &jwt::ApplicationJwtSecret,
 ) -> Result<jwt::JwtString> {
     // don't allow external user to infer what exactly failed
 

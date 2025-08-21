@@ -3,15 +3,16 @@ use sha2::{Digest, Sha256};
 use sqlx::{FromRow, PgPool};
 
 use crate::{
+    auth,
     config::UserConfigDbEntries,
-    database_constraints,
-    model::{self, DecryptedDbSecret, Email, EncryptedDbSecret, PasswordHashString, UserId},
+    db_constraints, db_secret,
+    model::{self, Email, UserId},
 };
 
 pub async fn create_user(
     db_pool: &PgPool,
     email: Email,
-    password_hash: PasswordHashString,
+    password_hash: auth::PasswordHashString,
 ) -> Result<()> {
     sqlx::query!(
         "INSERT INTO users (email, password_hash) VALUES ($1, $2)",
@@ -40,7 +41,7 @@ pub async fn get_user_id(db_pool: &PgPool, email: Email) -> Result<UserId> {
 pub async fn get_user(
     db_pool: &PgPool,
     user_id: &UserId,
-) -> Result<UserConfigDbEntries<EncryptedDbSecret>> {
+) -> Result<UserConfigDbEntries<db_secret::Encrypted>> {
     sqlx::query_as(
         "SELECT
             wait_seconds,
@@ -67,12 +68,12 @@ pub async fn get_user(
 pub async fn set_user_config_secrets(
     db_pool: &PgPool,
     user_id: UserId,
-    config: UserConfigDbEntries<DecryptedDbSecret, database_constraints::ValidConstraints>,
-    application_user_secret: &model::ApplicationUserSecrets,
+    config: UserConfigDbEntries<db_secret::Decrypted, db_constraints::ValidConstraints>,
+    application_user_secret: &db_secret::ApplicationUserSecrets,
 ) -> Result<()> {
     let secrets_key = compute_user_secrets_key(&user_id, application_user_secret);
 
-    let _: Option<UserConfigDbEntries<DecryptedDbSecret>> = sqlx::query_as(
+    let _: Option<UserConfigDbEntries<db_secret::Decrypted>> = sqlx::query_as(
         "UPDATE users
         SET
             wait_seconds = $2,
@@ -118,8 +119,8 @@ pub async fn set_user_config_secrets(
 pub async fn get_user_secrets(
     db_pool: &PgPool,
     user_id: &UserId,
-    application_user_secret: &model::ApplicationUserSecrets,
-) -> Result<UserConfigDbEntries<DecryptedDbSecret, database_constraints::ValidConstraints>> {
+    application_user_secret: &db_secret::ApplicationUserSecrets,
+) -> Result<UserConfigDbEntries<db_secret::Decrypted, db_constraints::ValidConstraints>> {
     let secrets_key = compute_user_secrets_key(user_id, application_user_secret);
 
     sqlx::query_as(
@@ -176,8 +177,8 @@ pub async fn get_user_info(db_pool: &PgPool, user_id: UserId) -> Result<UserInfo
 
 fn compute_user_secrets_key(
     user_id: &UserId,
-    application_user_secret: &model::ApplicationUserSecrets,
-) -> model::UserSecretsKey {
+    application_user_secret: &db_secret::ApplicationUserSecrets,
+) -> db_secret::UserSecretsDecryptionKey {
     let user_id = user_id.inner.to_string();
     let app_user_secret = &application_user_secret.inner;
 
@@ -190,13 +191,13 @@ fn compute_user_secrets_key(
 
     let hex_string = format!("{digest:x}");
 
-    model::UserSecretsKey { inner: hex_string }
+    db_secret::UserSecretsDecryptionKey { inner: hex_string }
 }
 
 #[derive(FromRow)]
 pub struct UserInfo {
     pub id: model::UserId,
     pub email: model::Email,
-    pub password_hash: model::PasswordHashString,
+    pub password_hash: auth::PasswordHashString,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }

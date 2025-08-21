@@ -173,16 +173,21 @@ pub struct FrontEntry {
 pub struct FrontEntryContent {
     pub member: String, // member ID or custom front ID
     pub uid: String,    // System ID
-    
+
     #[serde(rename = "startTime")]
     #[serde(deserialize_with = "parse_epoch_millis_to_datetime_utc")]
     pub start_time: chrono::DateTime<chrono::Utc>,
 }
 
-fn parse_epoch_millis_to_datetime_utc<'de, D>(d: D) -> Result<chrono::DateTime<chrono::Utc>, D::Error> where D: Deserializer<'de> {
+fn parse_epoch_millis_to_datetime_utc<'de, D>(
+    d: D,
+) -> Result<chrono::DateTime<chrono::Utc>, D::Error>
+where
+    D: Deserializer<'de>,
+{
     let epoch_millis = i64::deserialize(d)?;
     chrono::DateTime::from_timestamp_millis(epoch_millis)
-    .ok_or_else(||serde::de::Error::custom("Datime<Utc> from timestamp failed"))
+        .ok_or_else(|| serde::de::Error::custom("Datime<Utc> from timestamp failed"))
 }
 
 #[derive(Debug, Clone)]

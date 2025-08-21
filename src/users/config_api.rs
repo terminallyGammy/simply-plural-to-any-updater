@@ -1,11 +1,11 @@
 use crate::database;
-use crate::model::HttpResult;
+use crate::http::HttpResult;
 use crate::users::config;
 use crate::users::jwt;
 use rocket::{serde::json::Json, State};
 use sqlx::PgPool;
 
-#[get("/user/config")]
+#[get("/api/user/config")]
 pub async fn get_api_user_config(
     db_pool: &State<PgPool>,
     jwt: HttpResult<jwt::Jwt>,
@@ -17,7 +17,7 @@ pub async fn get_api_user_config(
     Ok(Json(user_config))
 }
 
-#[post("/user/config", data = "<config>")]
+#[post("/api/user/config", data = "<config>")]
 pub async fn post_api_user_config(
     config: Json<config::UserConfigDbEntries<database::Decrypted>>,
     jwt: HttpResult<jwt::Jwt>,

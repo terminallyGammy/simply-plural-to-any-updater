@@ -1,14 +1,14 @@
 use crate::database;
-use crate::model::HttpResult;
-use crate::model::UserId;
+use crate::http::HttpResult;
 use crate::setup;
 use crate::updater::{manager, work_loop};
 use crate::users;
+use crate::users::UserId;
 use anyhow::Result;
 use rocket::{serde::json::Json, State};
 use sqlx::PgPool;
 
-#[get("/updaters/status")]
+#[get("/api/updaters/status")]
 pub fn get_api_updaters_status(
     shared_updaters: &State<manager::UpdaterManager>,
     jwt: HttpResult<users::Jwt>,
@@ -21,7 +21,7 @@ pub fn get_api_updaters_status(
     Ok(Json(updaters_state))
 }
 
-#[post("/updaters/restart")]
+#[post("/api/updaters/restart")]
 pub async fn post_api_updaters_restart(
     jwt: HttpResult<users::Jwt>,
     db_pool: &State<PgPool>,

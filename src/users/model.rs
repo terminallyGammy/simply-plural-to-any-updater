@@ -1,9 +1,7 @@
-use std::{fmt::Display, str::FromStr, time::Duration};
+use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Uuid, FromRow};
-
-use crate::users;
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow, sqlx::Type)]
 pub struct Email {
@@ -40,29 +38,3 @@ impl Display for UserId {
         write!(f, "UserId({})", self.inner)
     }
 }
-
-#[derive(Deserialize, Clone)]
-pub struct UserLoginCredentials {
-    pub email: Email,
-    pub password: users::UserProvidedPassword,
-}
-
-#[derive(Clone, Deserialize, Serialize, Debug, Default)]
-pub struct WaitSeconds {
-    pub inner: Duration,
-}
-
-impl From<Duration> for WaitSeconds {
-    fn from(value: Duration) -> Self {
-        Self { inner: value }
-    }
-}
-
-impl From<i32> for WaitSeconds {
-    #[allow(clippy::cast_sign_loss)]
-    fn from(secs: i32) -> Self {
-        Duration::from_secs(secs as u64).into()
-    }
-}
-
-pub type HttpResult<T> = Result<T, rocket::response::Debug<anyhow::Error>>;

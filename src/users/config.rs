@@ -1,10 +1,8 @@
 use anyhow::{anyhow, Result};
 use sqlx::FromRow;
+use std::time::Duration;
 
-use crate::{
-    config_value, config_value_if, database,
-    model::{self, UserId},
-};
+use crate::{config_value, config_value_if, database, users::model::UserId};
 use serde::{Deserialize, Serialize};
 
 use sp2any_macros::WithOptionDefaults;
@@ -59,7 +57,7 @@ pub struct UserConfigForUpdater {
     pub discord_base_url: String,
 
     // Note: v Keep this in sync with UserConfigDbEntries! v
-    pub wait_seconds: model::WaitSeconds,
+    pub wait_seconds: WaitSeconds,
 
     pub system_name: String,
     pub status_prefix: String,
@@ -74,6 +72,24 @@ pub struct UserConfigForUpdater {
     pub vrchat_username: database::Decrypted,
     pub vrchat_password: database::Decrypted,
     pub vrchat_cookie: database::Decrypted,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
+pub struct WaitSeconds {
+    pub inner: Duration,
+}
+
+impl From<Duration> for WaitSeconds {
+    fn from(value: Duration) -> Self {
+        Self { inner: value }
+    }
+}
+
+impl From<i32> for WaitSeconds {
+    #[allow(clippy::cast_sign_loss)]
+    fn from(secs: i32) -> Self {
+        Duration::from_secs(secs as u64).into()
+    }
 }
 
 pub fn create_config_with_strong_constraints<Constraints>(

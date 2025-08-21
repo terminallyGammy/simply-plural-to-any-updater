@@ -1,6 +1,6 @@
-use crate::model::UserId;
 use crate::updater::work_loop;
 use crate::users;
+use crate::users::UserId;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

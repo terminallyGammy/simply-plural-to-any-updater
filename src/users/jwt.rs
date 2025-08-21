@@ -1,3 +1,4 @@
+use crate::users::model::UserId;
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -7,8 +8,6 @@ use rocket::{
     response, Request, State,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::model::UserId;
 
 #[derive(Clone)]
 pub struct ApplicationJwtSecret {

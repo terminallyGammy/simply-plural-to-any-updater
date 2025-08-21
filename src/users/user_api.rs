@@ -1,17 +1,15 @@
 use crate::database;
-use crate::model::Email;
-use crate::model::HttpResult;
-use crate::model::UserId;
-use crate::model::UserLoginCredentials;
+use crate::http::HttpResult;
 use crate::users::auth;
 use crate::users::jwt;
+use crate::users::model::{Email, UserId};
 use rocket::response;
 use rocket::{serde::json::Json, State};
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::PgPool;
 
-#[post("/user/register", data = "<credentials>")]
+#[post("/api/user/register", data = "<credentials>")]
 pub async fn post_api_user_register(
     db_pool: &State<PgPool>,
     credentials: Json<UserLoginCredentials>,
@@ -23,7 +21,7 @@ pub async fn post_api_user_register(
         .map_err(response::Debug)
 }
 
-#[post("/user/login", data = "<credentials>")]
+#[post("/api/user/login", data = "<credentials>")]
 pub async fn post_api_user_login(
     db_pool: &State<PgPool>,
     jwt_app_secret: &State<jwt::ApplicationJwtSecret>,
@@ -42,7 +40,7 @@ pub async fn post_api_user_login(
 }
 // todo. how can we enable users to reset their password? Do I really have to do this all manually here???
 
-#[get("/user/info")]
+#[get("/api/user/info")]
 pub async fn get_api_user_info(
     db_pool: &State<PgPool>,
     jwt: HttpResult<jwt::Jwt>,
@@ -75,4 +73,10 @@ impl From<database::UserInfo> for UserInfoUI {
             created_at,
         }
     }
+}
+
+#[derive(Deserialize, Clone)]
+pub struct UserLoginCredentials {
+    pub email: Email,
+    pub password: auth::UserProvidedPassword,
 }

@@ -5,9 +5,9 @@ use sqlx::{FromRow, PgPool};
 use crate::{
     database::constraints,
     database::secrets,
-    model::{self, Email, UserId},
     users,
     users::UserConfigDbEntries,
+    users::{Email, UserId},
 };
 
 pub async fn create_user(
@@ -197,8 +197,8 @@ fn compute_user_secrets_key(
 
 #[derive(FromRow)]
 pub struct UserInfo {
-    pub id: model::UserId,
-    pub email: model::Email,
+    pub id: UserId,
+    pub email: Email,
     pub password_hash: users::PasswordHashString,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }

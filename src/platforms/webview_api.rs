@@ -1,15 +1,15 @@
 use crate::database;
-use crate::model::HttpResult;
-use crate::model::UserId;
+use crate::http::HttpResult;
 use crate::plurality;
 use crate::users;
+use crate::users::UserId;
 use rocket::{
     response::{self, content::RawHtml},
     State,
 };
 use sqlx::PgPool;
 
-#[get("/fronting/<user_id>")]
+#[get("/api/fronting/<user_id>")]
 pub async fn get_api_fronting_by_user_id(
     user_id: &str, // todo. actually use system name here instead of user-id
     db_pool: &State<PgPool>,

@@ -90,6 +90,8 @@ All functionality is implemented using Rust and various libraries.
 
 For developers, one can use `/dev/*.run.sh` for local quick running.
 
+Codebase size: `./dev/codebase-size.sh`
+
 And run the files in `test` for testing. For the integration tests,
 you'll need to export the `SPS_API_TOKEN` and `SPS_API_WRITE_TOKEN` of the plural system used for tests - 
 as well as `VRCHAT_USERNAME`, `VRCHAT_PASSWORD` and `VRCHAT_COOKIE` of the VRC test user.

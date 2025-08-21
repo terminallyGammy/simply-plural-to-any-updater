@@ -1,8 +1,7 @@
-use crate::config::UserConfigForUpdater;
-use crate::platforms::vrchat_auth;
 use crate::plurality;
 use crate::record_if_error;
 use crate::updater;
+use crate::{platforms::vrchat_auth, users};
 use anyhow::anyhow;
 use anyhow::{Ok, Result};
 use vrchatapi::{
@@ -23,7 +22,7 @@ impl VRChatUpdater {
         }
     }
 
-    pub async fn setup(&mut self, config: &UserConfigForUpdater) -> Result<()> {
+    pub async fn setup(&mut self, config: &users::UserConfigForUpdater) -> Result<()> {
         let init_value = record_if_error!(
             self,
             vrchat_auth::authenticate_vrchat_with_cookie(config).await
@@ -34,7 +33,7 @@ impl VRChatUpdater {
 
     pub async fn update_fronting_status(
         &mut self,
-        config: &UserConfigForUpdater,
+        config: &users::UserConfigForUpdater,
         fronts: &[plurality::Fronter],
     ) -> Result<()> {
         let initialized_updater = record_if_error!(
@@ -51,7 +50,7 @@ impl VRChatUpdater {
 }
 
 async fn update_to_vrchat(
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
     initialized_updater: &InitializedUpdater,
     fronts: &[plurality::Fronter],
 ) -> Result<()> {

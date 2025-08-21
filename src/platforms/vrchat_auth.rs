@@ -1,5 +1,5 @@
-use crate::config::UserConfigForUpdater;
 use crate::database;
+use crate::users;
 
 use anyhow::{anyhow, Result};
 use either::Either;
@@ -27,7 +27,7 @@ const VRCHAT_COOKIE_URL: &str = "https://api.vrchat.cloud";
 
 /* Called in updater. Cookie is only validated, no new cookie is created. */
 pub async fn authenticate_vrchat_with_cookie(
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
 ) -> Result<(VrcConfig, String)> {
     let creds: VRChatCredentialsWithCookie = (
         &config.vrchat_username,
@@ -124,7 +124,7 @@ fn extract_new_cookie(cookie_store: &Arc<cookie::Jar>) -> Result<String> {
 }
 
 async fn get_vrchat_user_id(
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
     vrchat_config: &VrcConfig,
 ) -> Result<String> {
     match authentication_api::get_current_user(vrchat_config).await? {

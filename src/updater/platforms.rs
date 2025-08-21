@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::{config::UserConfigForUpdater, platforms, plurality};
+use crate::{platforms, plurality, users};
 
 #[derive(Clone, Serialize, strum_macros::Display, Eq, Hash, PartialEq)]
 pub enum Platform {
@@ -40,7 +40,7 @@ impl Updater {
         }
     }
 
-    pub fn status(&self, config: &UserConfigForUpdater) -> UpdaterStatus {
+    pub fn status(&self, config: &users::UserConfigForUpdater) -> UpdaterStatus {
         if self.enabled(config) {
             self.last_operation_error()
                 .map_or(UpdaterStatus::Running, |e| UpdaterStatus::Error(e.clone()))
@@ -56,14 +56,14 @@ impl Updater {
         }
     }
 
-    pub const fn enabled(&self, config: &UserConfigForUpdater) -> bool {
+    pub const fn enabled(&self, config: &users::UserConfigForUpdater) -> bool {
         match self {
             Self::VRChat(_) => config.enable_vrchat,
             Self::Discord(_) => config.enable_discord,
         }
     }
 
-    pub async fn setup(&mut self, config: &UserConfigForUpdater) -> Result<()> {
+    pub async fn setup(&mut self, config: &users::UserConfigForUpdater) -> Result<()> {
         match self {
             Self::VRChat(updater) => updater.setup(config).await,
             Self::Discord(updater) => updater.setup(config).await,
@@ -72,7 +72,7 @@ impl Updater {
 
     pub async fn update_fronting_status(
         &mut self,
-        config: &UserConfigForUpdater,
+        config: &users::UserConfigForUpdater,
         fronts: &[plurality::Fronter],
     ) -> Result<()> {
         match self {

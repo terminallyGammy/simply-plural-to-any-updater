@@ -3,7 +3,7 @@ use std::{fmt::Display, str::FromStr, time::Duration};
 use serde::{Deserialize, Serialize};
 use sqlx::{types::Uuid, FromRow};
 
-use crate::auth;
+use crate::users;
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow, sqlx::Type)]
 pub struct Email {
@@ -44,7 +44,7 @@ impl Display for UserId {
 #[derive(Deserialize, Clone)]
 pub struct UserLoginCredentials {
     pub email: Email,
-    pub password: auth::UserProvidedPassword,
+    pub password: users::UserProvidedPassword,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default)]
@@ -64,3 +64,5 @@ impl From<i32> for WaitSeconds {
         Duration::from_secs(secs as u64).into()
     }
 }
+
+pub type HttpResult<T> = Result<T, rocket::response::Debug<anyhow::Error>>;

@@ -3,17 +3,17 @@ use sha2::{Digest, Sha256};
 use sqlx::{FromRow, PgPool};
 
 use crate::{
-    auth,
-    config::UserConfigDbEntries,
     database::constraints,
     database::secrets,
     model::{self, Email, UserId},
+    users,
+    users::UserConfigDbEntries,
 };
 
 pub async fn create_user(
     db_pool: &PgPool,
     email: Email,
-    password_hash: auth::PasswordHashString,
+    password_hash: users::PasswordHashString,
 ) -> Result<()> {
     sqlx::query!(
         "INSERT INTO users (email, password_hash) VALUES ($1, $2)",
@@ -199,6 +199,6 @@ fn compute_user_secrets_key(
 pub struct UserInfo {
     pub id: model::UserId,
     pub email: model::Email,
-    pub password_hash: auth::PasswordHashString,
+    pub password_hash: users::PasswordHashString,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }

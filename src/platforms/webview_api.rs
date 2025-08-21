@@ -1,6 +1,50 @@
+use crate::database;
+use crate::model::HttpResult;
+use crate::model::UserId;
 use crate::plurality;
+use crate::users;
+use rocket::{
+    response::{self, content::RawHtml},
+    State,
+};
+use sqlx::PgPool;
 
-pub fn generate_html(system_name: &str, fronts: Vec<plurality::Fronter>) -> String {
+#[get("/fronting/<user_id>")]
+pub async fn get_api_fronting_by_user_id(
+    user_id: &str, // todo. actually use system name here instead of user-id
+    db_pool: &State<PgPool>,
+    application_user_secrets: &State<database::ApplicationUserSecrets>,
+    client: &State<reqwest::Client>,
+) -> HttpResult<RawHtml<String>> {
+    eprintln!("GET /fronting/{user_id}.");
+
+    let user_id: UserId = user_id.try_into()?;
+
+    eprintln!("GET /fronting/{user_id}. Getting user secrets");
+
+    let user_config =
+        database::get_user_secrets(db_pool, &user_id, application_user_secrets).await?;
+
+    eprintln!("GET /fronting/{user_id}. Creating config");
+
+    let (updater_config, _) =
+        users::create_config_with_strong_constraints(&user_id, client, &user_config)?;
+
+    eprintln!("GET /fronting/{user_id}. Fetching fronts");
+
+    let fronts = plurality::fetch_fronts(&updater_config)
+        .await
+        .map_err(response::Debug)?;
+
+    eprintln!("GET /fronting/{user_id}. Rendering HTML");
+
+    let html = generate_html(&updater_config.system_name, fronts);
+
+    eprintln!("GET /fronting/{user_id}. OK");
+    Ok(RawHtml(html))
+}
+
+fn generate_html(system_name: &str, fronts: Vec<plurality::Fronter>) -> String {
     let fronts_formatted = fronts
         .into_iter()
         .map(|m| -> String {

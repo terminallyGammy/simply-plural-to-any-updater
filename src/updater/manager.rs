@@ -1,12 +1,12 @@
-use crate::config::UserConfigForUpdater;
 use crate::model::UserId;
 use crate::updater::work_loop;
+use crate::users;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub type SharedMutable<T> = Arc<Mutex<T>>;
-pub type ThreadSafePerUser<T> = SharedMutable<HashMap<UserId, T>>;
+type SharedMutable<T> = Arc<Mutex<T>>;
+type ThreadSafePerUser<T> = SharedMutable<HashMap<UserId, T>>;
 
 #[derive(Clone)]
 pub struct UpdaterManager {
@@ -46,7 +46,11 @@ impl UpdaterManager {
     }
 
     #[allow(clippy::significant_drop_tightening)]
-    pub fn restart_updater(&self, user_id: &UserId, config: UserConfigForUpdater) -> Result<()> {
+    pub fn restart_updater(
+        &self,
+        user_id: &UserId,
+        config: users::UserConfigForUpdater,
+    ) -> Result<()> {
         let mut locked_task = self.tasks.lock().map_err(|e| anyhow!(e.to_string()))?;
 
         eprintln!("Aborting updater {user_id}");

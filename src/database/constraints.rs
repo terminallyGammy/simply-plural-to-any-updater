@@ -1,6 +1,6 @@
 use sqlx::{error::BoxDynError, postgres, Decode, FromRow, Postgres};
 
-use crate::{config::UserConfigDbEntries, database::secrets};
+use crate::{database::secrets, users::UserConfigDbEntries};
 use anyhow::anyhow;
 
 pub trait ConstraintsType: Clone {}

@@ -1,4 +1,4 @@
-use crate::{config::UserConfigForUpdater, plurality, record_if_error, updater};
+use crate::{plurality, record_if_error, updater, users};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -23,13 +23,13 @@ impl DiscordUpdater {
     }
 
     #[allow(clippy::unused_async)]
-    pub async fn setup(&self, _config: &UserConfigForUpdater) -> Result<()> {
+    pub async fn setup(&self, _config: &users::UserConfigForUpdater) -> Result<()> {
         Ok(())
     }
 
     pub async fn update_fronting_status(
         &mut self,
-        config: &UserConfigForUpdater,
+        config: &users::UserConfigForUpdater,
         fronts: &[plurality::Fronter],
     ) -> Result<()> {
         record_if_error!(self, update_to_discord(config, fronts).await)
@@ -37,7 +37,7 @@ impl DiscordUpdater {
 }
 
 async fn update_to_discord(
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
     fronts: &[plurality::Fronter],
 ) -> Result<()> {
     let fronting_format = plurality::FrontingFormat {
@@ -55,7 +55,10 @@ async fn update_to_discord(
     Ok(())
 }
 
-async fn set_discord_status(config: &UserConfigForUpdater, status_string: String) -> Result<()> {
+async fn set_discord_status(
+    config: &users::UserConfigForUpdater,
+    status_string: String,
+) -> Result<()> {
     eprintln!("Setting Discord Status: {status_string}");
 
     let discord_status_url = format!(

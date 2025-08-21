@@ -4,9 +4,9 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Deserializer;
 
-use crate::config::UserConfigForUpdater;
+use crate::users;
 
-pub async fn fetch_fronts(config: &UserConfigForUpdater) -> Result<Vec<Fronter>> {
+pub async fn fetch_fronts(config: &users::UserConfigForUpdater) -> Result<Vec<Fronter>> {
     let front_entries = simply_plural_http_request_get_fronters(config).await?;
 
     if front_entries.is_empty() {
@@ -31,7 +31,7 @@ pub async fn fetch_fronts(config: &UserConfigForUpdater) -> Result<Vec<Fronter>>
 async fn get_all_members_and_custom_fronters(
     system_id: &String,
     vrcsn_field_id: Option<String>,
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
 ) -> Result<Vec<Fronter>> {
     let all_members: Vec<Fronter> = simply_plural_http_get_members(config, system_id)
         .await?
@@ -78,7 +78,7 @@ fn filter_frontables_by_front_entries(
 }
 
 async fn simply_plural_http_request_get_fronters(
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
 ) -> Result<Vec<FrontEntry>> {
     eprintln!("Fetching fronts from SimplyPlural...");
     let fronts_url = format!("{}/fronters", &config.simply_plural_base_url);
@@ -96,7 +96,7 @@ async fn simply_plural_http_request_get_fronters(
 }
 
 async fn get_vrchat_status_name_field_id(
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
     system_id: &String,
 ) -> Result<Option<String>> {
     eprintln!("Fetching custom fields from SimplyPlural...");
@@ -124,7 +124,7 @@ async fn get_vrchat_status_name_field_id(
 }
 
 async fn simply_plural_http_get_members(
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
     system_id: &String,
 ) -> Result<Vec<Member>> {
     eprintln!("Fetching all members from SimplyPlural..");
@@ -143,7 +143,7 @@ async fn simply_plural_http_get_members(
 }
 
 async fn simply_plural_http_get_custom_fronts(
-    config: &UserConfigForUpdater,
+    config: &users::UserConfigForUpdater,
     system_id: &String,
 ) -> Result<Vec<CustomFront>> {
     eprintln!("Fetching all Custom Fronts from SimplyPlural...");
@@ -174,6 +174,7 @@ pub struct FrontEntryContent {
     pub member: String, // member ID or custom front ID
     pub uid: String,    // System ID
 
+    #[allow(dead_code)] // todo. remove this when implementation done.
     #[serde(rename = "startTime")]
     #[serde(deserialize_with = "parse_epoch_millis_to_datetime_utc")]
     pub start_time: chrono::DateTime<chrono::Utc>,

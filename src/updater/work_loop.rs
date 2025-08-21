@@ -3,7 +3,7 @@ use tokio::time::sleep;
 
 use crate::updater::platforms::{Platform, Updater, UpdaterStatus};
 use crate::updater::{manager, platforms};
-use crate::{config::UserConfigForUpdater, plurality};
+use crate::{plurality, users};
 use anyhow::Result;
 use chrono::Utc;
 
@@ -11,7 +11,10 @@ pub type CancleableUpdater = tokio::task::JoinHandle<()>;
 pub type UserUpdatersStatuses = HashMap<Platform, UpdaterStatus>;
 type UserUpdaters = HashMap<Platform, Updater>;
 
-pub async fn run_loop(config: UserConfigForUpdater, shared_updaters: manager::UpdaterManager) -> ! {
+pub async fn run_loop(
+    config: users::UserConfigForUpdater,
+    shared_updaters: manager::UpdaterManager,
+) -> ! {
     eprintln!("Running Updater ...");
 
     let mut updaters: UserUpdaters = platforms::implemented_updaters()
@@ -54,14 +57,20 @@ pub async fn run_loop(config: UserConfigForUpdater, shared_updaters: manager::Up
     }
 }
 
-fn get_statuses(updaters: &UserUpdaters, config: &UserConfigForUpdater) -> UserUpdatersStatuses {
+fn get_statuses(
+    updaters: &UserUpdaters,
+    config: &users::UserConfigForUpdater,
+) -> UserUpdatersStatuses {
     updaters
         .iter()
         .map(|(k, u)| (k.to_owned(), u.status(config)))
         .collect()
 }
 
-async fn loop_logic(config: &UserConfigForUpdater, updaters: &mut UserUpdaters) -> Result<()> {
+async fn loop_logic(
+    config: &users::UserConfigForUpdater,
+    updaters: &mut UserUpdaters,
+) -> Result<()> {
     let fronts = plurality::fetch_fronts(config).await?;
 
     for updater in updaters.values_mut() {

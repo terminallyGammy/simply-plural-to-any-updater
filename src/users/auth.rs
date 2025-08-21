@@ -7,7 +7,7 @@ use argon2::{
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-use crate::{database, jwt};
+use crate::{database, users::jwt};
 
 #[derive(Deserialize, Clone)]
 pub struct UserProvidedPassword {

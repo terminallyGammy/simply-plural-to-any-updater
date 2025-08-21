@@ -7,7 +7,7 @@ use argon2::{
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-use crate::{db::UserInfo, jwt};
+use crate::{database, jwt};
 
 #[derive(Deserialize, Clone)]
 pub struct UserProvidedPassword {
@@ -38,7 +38,7 @@ pub fn create_password_hash(password: &UserProvidedPassword) -> Result<PasswordH
 
 pub fn verify_password_and_create_token(
     password: &UserProvidedPassword,
-    user_info: &UserInfo,
+    user_info: &database::UserInfo,
     jwt_secret: &jwt::ApplicationJwtSecret,
 ) -> Result<jwt::JwtString> {
     // don't allow external user to infer what exactly failed

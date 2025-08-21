@@ -1,6 +1,5 @@
 use crate::{
-    config::UserConfigForUpdater, fronting_status, record_if_error, simply_plural,
-    updater::Platform,
+    config::UserConfigForUpdater, fronting_status, record_if_error, simply_plural, updater,
 };
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -19,7 +18,7 @@ pub struct DiscordUpdater {
     pub last_operation_error: Option<String>,
 }
 impl DiscordUpdater {
-    pub const fn new(_platform: Platform) -> Self {
+    pub const fn new(_platform: updater::Platform) -> Self {
         Self {
             last_operation_error: None,
         }

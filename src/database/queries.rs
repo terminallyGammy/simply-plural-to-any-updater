@@ -5,7 +5,8 @@ use sqlx::{FromRow, PgPool};
 use crate::{
     auth,
     config::UserConfigDbEntries,
-    db_constraints, db_secret,
+    database::constraints,
+    database::secrets,
     model::{self, Email, UserId},
 };
 
@@ -41,7 +42,7 @@ pub async fn get_user_id(db_pool: &PgPool, email: Email) -> Result<UserId> {
 pub async fn get_user(
     db_pool: &PgPool,
     user_id: &UserId,
-) -> Result<UserConfigDbEntries<db_secret::Encrypted>> {
+) -> Result<UserConfigDbEntries<secrets::Encrypted>> {
     sqlx::query_as(
         "SELECT
             wait_seconds,
@@ -68,12 +69,12 @@ pub async fn get_user(
 pub async fn set_user_config_secrets(
     db_pool: &PgPool,
     user_id: UserId,
-    config: UserConfigDbEntries<db_secret::Decrypted, db_constraints::ValidConstraints>,
-    application_user_secret: &db_secret::ApplicationUserSecrets,
+    config: UserConfigDbEntries<secrets::Decrypted, constraints::ValidConstraints>,
+    application_user_secret: &secrets::ApplicationUserSecrets,
 ) -> Result<()> {
     let secrets_key = compute_user_secrets_key(&user_id, application_user_secret);
 
-    let _: Option<UserConfigDbEntries<db_secret::Decrypted>> = sqlx::query_as(
+    let _: Option<UserConfigDbEntries<secrets::Decrypted>> = sqlx::query_as(
         "UPDATE users
         SET
             wait_seconds = $2,
@@ -119,8 +120,8 @@ pub async fn set_user_config_secrets(
 pub async fn get_user_secrets(
     db_pool: &PgPool,
     user_id: &UserId,
-    application_user_secret: &db_secret::ApplicationUserSecrets,
-) -> Result<UserConfigDbEntries<db_secret::Decrypted, db_constraints::ValidConstraints>> {
+    application_user_secret: &secrets::ApplicationUserSecrets,
+) -> Result<UserConfigDbEntries<secrets::Decrypted, constraints::ValidConstraints>> {
     let secrets_key = compute_user_secrets_key(user_id, application_user_secret);
 
     sqlx::query_as(
@@ -177,8 +178,8 @@ pub async fn get_user_info(db_pool: &PgPool, user_id: UserId) -> Result<UserInfo
 
 fn compute_user_secrets_key(
     user_id: &UserId,
-    application_user_secret: &db_secret::ApplicationUserSecrets,
-) -> db_secret::UserSecretsDecryptionKey {
+    application_user_secret: &secrets::ApplicationUserSecrets,
+) -> secrets::UserSecretsDecryptionKey {
     let user_id = user_id.inner.to_string();
     let app_user_secret = &application_user_secret.inner;
 
@@ -191,7 +192,7 @@ fn compute_user_secrets_key(
 
     let hex_string = format!("{digest:x}");
 
-    db_secret::UserSecretsDecryptionKey { inner: hex_string }
+    secrets::UserSecretsDecryptionKey { inner: hex_string }
 }
 
 #[derive(FromRow)]

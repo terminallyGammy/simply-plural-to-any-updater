@@ -1,6 +1,6 @@
 use crate::config::UserConfigForUpdater;
 use crate::model::UserId;
-use crate::updater_loop;
+use crate::updater::work_loop;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -9,12 +9,12 @@ pub type SharedMutable<T> = Arc<Mutex<T>>;
 pub type ThreadSafePerUser<T> = SharedMutable<HashMap<UserId, T>>;
 
 #[derive(Clone)]
-pub struct SharedUpdaters {
-    pub tasks: ThreadSafePerUser<updater_loop::CancleableUpdater>,
-    pub statuses: ThreadSafePerUser<updater_loop::UserUpdatersStatuses>,
+pub struct UpdaterManager {
+    pub tasks: ThreadSafePerUser<work_loop::CancleableUpdater>,
+    pub statuses: ThreadSafePerUser<work_loop::UserUpdatersStatuses>,
 }
 
-impl SharedUpdaters {
+impl UpdaterManager {
     pub fn new() -> Self {
         Self {
             tasks: Arc::new(Mutex::new(HashMap::new())),
@@ -22,10 +22,7 @@ impl SharedUpdaters {
         }
     }
 
-    pub fn get_updaters_state(
-        &self,
-        user_id: &UserId,
-    ) -> Result<updater_loop::UserUpdatersStatuses> {
+    pub fn get_updaters_state(&self, user_id: &UserId) -> Result<work_loop::UserUpdatersStatuses> {
         Ok(self
             .statuses
             .lock()
@@ -38,7 +35,7 @@ impl SharedUpdaters {
     pub fn set_updater_state(
         &self,
         user_id: &UserId,
-        updater_state: updater_loop::UserUpdatersStatuses,
+        updater_state: work_loop::UserUpdatersStatuses,
     ) -> Result<()> {
         self.statuses
             .lock()
@@ -57,7 +54,7 @@ impl SharedUpdaters {
 
         let owned_self = self.to_owned();
         let new_task = tokio::spawn(async move {
-            updater_loop::run_loop(config, owned_self).await;
+            work_loop::run_loop(config, owned_self).await;
         });
 
         locked_task.insert(user_id.clone(), new_task);

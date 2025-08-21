@@ -2,7 +2,7 @@ use crate::config::UserConfigForUpdater;
 use crate::fronting_status;
 use crate::record_if_error;
 use crate::simply_plural;
-use crate::updater::Platform;
+use crate::updater;
 use crate::vrchat_auth;
 use anyhow::anyhow;
 use anyhow::{Ok, Result};
@@ -17,7 +17,7 @@ pub struct VRChatUpdater {
     initialized: Option<InitializedUpdater>,
 }
 impl VRChatUpdater {
-    pub const fn new(_platform: Platform) -> Self {
+    pub const fn new(_platform: updater::Platform) -> Self {
         Self {
             last_operation_error: None,
             initialized: None,

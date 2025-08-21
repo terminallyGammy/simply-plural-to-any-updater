@@ -1,6 +1,4 @@
-use crate::{
-    config::UserConfigForUpdater, fronting_status, record_if_error, simply_plural, updater,
-};
+use crate::{config::UserConfigForUpdater, plurality, record_if_error, updater};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +30,7 @@ impl DiscordUpdater {
     pub async fn update_fronting_status(
         &mut self,
         config: &UserConfigForUpdater,
-        fronts: &[simply_plural::Fronter],
+        fronts: &[plurality::Fronter],
     ) -> Result<()> {
         record_if_error!(self, update_to_discord(config, fronts).await)
     }
@@ -40,17 +38,17 @@ impl DiscordUpdater {
 
 async fn update_to_discord(
     config: &UserConfigForUpdater,
-    fronts: &[simply_plural::Fronter],
+    fronts: &[plurality::Fronter],
 ) -> Result<()> {
-    let fronting_format = fronting_status::FrontingFormat {
-        max_length: Some(fronting_status::DISCORD_STATUS_MAX_LENGTH),
-        cleaning: fronting_status::CleanForPlatform::NoClean,
+    let fronting_format = plurality::FrontingFormat {
+        max_length: Some(plurality::DISCORD_STATUS_MAX_LENGTH),
+        cleaning: plurality::CleanForPlatform::NoClean,
         prefix: config.status_prefix.clone(),
         status_if_no_fronters: config.status_no_fronts.clone(),
         truncate_names_to_length_if_status_too_long: config.status_truncate_names_to,
     };
 
-    let status_string = fronting_status::format_fronting_status(&fronting_format, fronts);
+    let status_string = plurality::format_fronting_status(&fronting_format, fronts);
 
     set_discord_status(config, status_string).await?;
 

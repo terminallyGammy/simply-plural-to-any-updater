@@ -1,6 +1,6 @@
-use crate::simply_plural;
+use crate::plurality;
 
-pub fn generate_html(system_name: &str, fronts: Vec<simply_plural::Fronter>) -> String {
+pub fn generate_html(system_name: &str, fronts: Vec<plurality::Fronter>) -> String {
     let fronts_formatted = fronts
         .into_iter()
         .map(|m| -> String {

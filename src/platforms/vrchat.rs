@@ -1,9 +1,8 @@
 use crate::config::UserConfigForUpdater;
-use crate::fronting_status;
+use crate::platforms::vrchat_auth;
+use crate::plurality;
 use crate::record_if_error;
-use crate::simply_plural;
 use crate::updater;
-use crate::vrchat_auth;
 use anyhow::anyhow;
 use anyhow::{Ok, Result};
 use vrchatapi::{
@@ -36,7 +35,7 @@ impl VRChatUpdater {
     pub async fn update_fronting_status(
         &mut self,
         config: &UserConfigForUpdater,
-        fronts: &[simply_plural::Fronter],
+        fronts: &[plurality::Fronter],
     ) -> Result<()> {
         let initialized_updater = record_if_error!(
             self,
@@ -54,17 +53,17 @@ impl VRChatUpdater {
 async fn update_to_vrchat(
     config: &UserConfigForUpdater,
     initialized_updater: &InitializedUpdater,
-    fronts: &[simply_plural::Fronter],
+    fronts: &[plurality::Fronter],
 ) -> Result<()> {
-    let fronting_format = fronting_status::FrontingFormat {
-        max_length: Some(fronting_status::VRCHAT_MAX_ALLOWED_STATUS_LENGTH),
-        cleaning: fronting_status::CleanForPlatform::VRChat,
+    let fronting_format = plurality::FrontingFormat {
+        max_length: Some(plurality::VRCHAT_MAX_ALLOWED_STATUS_LENGTH),
+        cleaning: plurality::CleanForPlatform::VRChat,
         prefix: config.status_prefix.clone(),
         status_if_no_fronters: config.status_no_fronts.clone(),
         truncate_names_to_length_if_status_too_long: config.status_truncate_names_to,
     };
 
-    let status_string = fronting_status::format_fronting_status(&fronting_format, fronts);
+    let status_string = plurality::format_fronting_status(&fronting_format, fronts);
 
     set_vrchat_status(initialized_updater, status_string.as_str()).await
 }

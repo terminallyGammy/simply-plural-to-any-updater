@@ -11,17 +11,13 @@ mod api;
 mod auth;
 mod config;
 mod database;
-mod discord;
-mod fronting_status;
 mod jwt;
 mod macros;
 mod model;
+mod platforms;
+mod plurality;
 mod setup;
-mod simply_plural;
 mod updater;
-mod vrchat;
-mod vrchat_auth;
-mod webview;
 
 #[tokio::main]
 async fn main() -> Result<()> {

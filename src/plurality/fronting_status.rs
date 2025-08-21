@@ -1,4 +1,4 @@
-use crate::simply_plural;
+use crate::plurality::simply_plural;
 
 use encoding_rs::ISO_8859_15;
 
@@ -163,7 +163,6 @@ fn clean_name_for_vrchat_status(dirty_name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::simply_plural::Fronter;
 
     fn mock_formatter_for_tests(
         prefix: &str,
@@ -181,8 +180,8 @@ mod tests {
     }
 
     // Helper function to create mock MemberContent
-    fn mock_member_content(name: &str, vrchat_status_name: &str) -> Fronter {
-        Fronter {
+    fn mock_member_content(name: &str, vrchat_status_name: &str) -> simply_plural::Fronter {
+        simply_plural::Fronter {
             id: String::new(),
             name: name.to_string(),
             avatar_url: String::new(),

@@ -1,9 +1,7 @@
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::{
-    config::UserConfigForUpdater, discord::DiscordUpdater, simply_plural, vrchat::VRChatUpdater,
-};
+use crate::{config::UserConfigForUpdater, platforms, plurality};
 
 #[derive(Clone, Serialize, strum_macros::Display, Eq, Hash, PartialEq)]
 pub enum Platform {
@@ -19,8 +17,8 @@ pub enum UpdaterStatus {
 }
 
 pub enum Updater {
-    VRChat(Box<VRChatUpdater>),
-    Discord(DiscordUpdater),
+    VRChat(Box<platforms::VRChatUpdater>),
+    Discord(platforms::DiscordUpdater),
 }
 
 pub fn implemented_updaters() -> Vec<Platform> {
@@ -30,8 +28,8 @@ pub fn implemented_updaters() -> Vec<Platform> {
 impl Updater {
     pub fn new(platform: Platform) -> Self {
         match platform {
-            Platform::VRChat => Self::VRChat(Box::new(VRChatUpdater::new(platform))),
-            Platform::Discord => Self::Discord(DiscordUpdater::new(platform)),
+            Platform::VRChat => Self::VRChat(Box::new(platforms::VRChatUpdater::new(platform))),
+            Platform::Discord => Self::Discord(platforms::DiscordUpdater::new(platform)),
         }
     }
 
@@ -75,7 +73,7 @@ impl Updater {
     pub async fn update_fronting_status(
         &mut self,
         config: &UserConfigForUpdater,
-        fronts: &[simply_plural::Fronter],
+        fronts: &[plurality::Fronter],
     ) -> Result<()> {
         match self {
             Self::VRChat(updater) => updater.update_fronting_status(config, fronts).await,

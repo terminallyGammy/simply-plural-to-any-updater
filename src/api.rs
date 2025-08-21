@@ -6,12 +6,11 @@ use crate::jwt;
 use crate::model::Email;
 use crate::model::UserId;
 use crate::model::UserLoginCredentials;
+use crate::platforms;
+use crate::plurality;
 use crate::setup;
 use crate::setup::ApplicationSetup;
-use crate::simply_plural;
 use crate::updater;
-use crate::vrchat_auth;
-use crate::webview;
 use anyhow::anyhow;
 use anyhow::Result;
 use either::Either;
@@ -38,16 +37,16 @@ pub async fn start_application(setup: setup::ApplicationSetup) -> Result<()> {
         .mount(
             "/api",
             routes![
-                rest_get_fronting,
-                get_updaters_status,
-                restart_updaters,
-                register,
-                login,
-                get_user_info,
-                get_config,
-                set_config,
-                vrchat_user_authentication_request,
-                vrchat_user_authentication_resolve
+                get_api_fronting_by_user_id,
+                get_api_updaters_status,
+                post_api_updaters_restart,
+                post_api_user_register,
+                post_api_user_login,
+                get_api_user_info,
+                get_api_user_config,
+                post_api_user_config,
+                post_api_user_platform_vrchat_auth_2fa_request,
+                post_api_user_platform_vrchat_auth_2fa_resolve
             ],
         )
         .launch()
@@ -81,7 +80,7 @@ async fn restart_all_user_updaters_for_app_startups(setup: ApplicationSetup) -> 
 }
 
 #[get("/updaters/status")]
-fn get_updaters_status(
+fn get_api_updaters_status(
     shared_updaters: &State<updater::UpdaterManager>,
     jwt: ResponseResult<jwt::Jwt>,
 ) -> ResponseResult<Json<updater::work_loop::UserUpdatersStatuses>> {
@@ -94,7 +93,7 @@ fn get_updaters_status(
 }
 
 #[post("/updaters/restart")]
-async fn restart_updaters(
+async fn post_api_updaters_restart(
     jwt: ResponseResult<jwt::Jwt>,
     db_pool: &State<PgPool>,
     application_user_secrets: &State<database::ApplicationUserSecrets>,
@@ -136,7 +135,7 @@ async fn restart_updater_for_user(
 }
 
 #[get("/fronting/<user_id>")]
-async fn rest_get_fronting(
+async fn get_api_fronting_by_user_id(
     user_id: &str, // todo. actually use system name here instead of user-id
     db_pool: &State<PgPool>,
     application_user_secrets: &State<database::ApplicationUserSecrets>,
@@ -158,20 +157,20 @@ async fn rest_get_fronting(
 
     eprintln!("GET /fronting/{user_id}. Fetching fronts");
 
-    let fronts = simply_plural::fetch_fronts(&updater_config)
+    let fronts = plurality::fetch_fronts(&updater_config)
         .await
         .map_err(response::Debug)?;
 
     eprintln!("GET /fronting/{user_id}. Rendering HTML");
 
-    let html = webview::generate_html(&updater_config.system_name, fronts);
+    let html = platforms::generate_html(&updater_config.system_name, fronts);
 
     eprintln!("GET /fronting/{user_id}. OK");
     Ok(RawHtml(html))
 }
 
 #[post("/user/register", data = "<credentials>")]
-async fn register(
+async fn post_api_user_register(
     db_pool: &State<PgPool>,
     credentials: Json<UserLoginCredentials>,
 ) -> ResponseResult<()> {
@@ -183,7 +182,7 @@ async fn register(
 }
 
 #[post("/user/login", data = "<credentials>")]
-async fn login(
+async fn post_api_user_login(
     db_pool: &State<PgPool>,
     jwt_app_secret: &State<jwt::ApplicationJwtSecret>,
     credentials: Json<UserLoginCredentials>,
@@ -202,7 +201,7 @@ async fn login(
 // todo. how can we enable users to reset their password? Do I really have to do this all manually here???
 
 #[get("/user/info")]
-async fn get_user_info(
+async fn get_api_user_info(
     db_pool: &State<PgPool>,
     jwt: ResponseResult<jwt::Jwt>,
 ) -> ResponseResult<Json<UserInfoUI>> {
@@ -237,7 +236,7 @@ impl From<database::UserInfo> for UserInfoUI {
 }
 
 #[get("/user/config")]
-async fn get_config(
+async fn get_api_user_config(
     db_pool: &State<PgPool>,
     jwt: ResponseResult<jwt::Jwt>,
 ) -> ResponseResult<Json<UserConfigDbEntries<database::Encrypted>>> {
@@ -249,7 +248,7 @@ async fn get_config(
 }
 
 #[post("/user/config", data = "<config>")]
-async fn set_config(
+async fn post_api_user_config(
     config: Json<UserConfigDbEntries<database::Decrypted>>,
     jwt: ResponseResult<jwt::Jwt>,
     db_pool: &State<PgPool>,
@@ -269,28 +268,34 @@ async fn set_config(
 }
 
 #[post("/user/platform/vrchat/auth_2fa/request", data = "<creds>")]
-async fn vrchat_user_authentication_request(
-    creds: Json<vrchat_auth::VRChatCredentials>,
+async fn post_api_user_platform_vrchat_auth_2fa_request(
+    creds: Json<platforms::vrchat_auth::VRChatCredentials>,
     _jwt: ResponseResult<jwt::Jwt>, // request should be authenticated, but we don't need user id
 ) -> ResponseResult<
-    Json<Either<vrchat_auth::VRChatCredentialsWithCookie, vrchat_auth::TwoFactorAuthMethod>>,
+    Json<
+        Either<
+            platforms::vrchat_auth::VRChatCredentialsWithCookie,
+            platforms::vrchat_auth::TwoFactorAuthMethod,
+        >,
+    >,
 > {
     let creds = creds.into_inner();
 
-    let creds_or_tfa_method = vrchat_auth::authenticate_vrchat_for_new_cookie(creds).await?;
+    let creds_or_tfa_method =
+        platforms::vrchat_auth::authenticate_vrchat_for_new_cookie(creds).await?;
 
     Ok(Json(creds_or_tfa_method))
 }
 
 #[post("/user/platform/vrchat/auth_2fa/resolve", data = "<creds_with_tfa>")]
-async fn vrchat_user_authentication_resolve(
+async fn post_api_user_platform_vrchat_auth_2fa_resolve(
     _jwt: ResponseResult<jwt::Jwt>, // request should be authenticated, but we don't need user id
-    creds_with_tfa: Json<vrchat_auth::VRChatCredentialsWithTwoFactorAuth>,
-) -> ResponseResult<Json<vrchat_auth::VRChatCredentialsWithCookie>> {
+    creds_with_tfa: Json<platforms::vrchat_auth::VRChatCredentialsWithTwoFactorAuth>,
+) -> ResponseResult<Json<platforms::vrchat_auth::VRChatCredentialsWithCookie>> {
     let creds_with_tfa = creds_with_tfa.into_inner();
 
     let valid_creds =
-        vrchat_auth::authenticate_vrchat_for_new_cookie_with_2fa(creds_with_tfa).await?;
+        platforms::vrchat_auth::authenticate_vrchat_for_new_cookie_with_2fa(creds_with_tfa).await?;
 
     Ok(Json(valid_creds))
 }

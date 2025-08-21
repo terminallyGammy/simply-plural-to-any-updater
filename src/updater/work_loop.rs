@@ -3,10 +3,7 @@ use tokio::time::sleep;
 
 use crate::updater::platforms::{Platform, Updater, UpdaterStatus};
 use crate::updater::{manager, platforms};
-use crate::{
-    config::UserConfigForUpdater,
-    simply_plural::{self},
-};
+use crate::{config::UserConfigForUpdater, plurality};
 use anyhow::Result;
 use chrono::Utc;
 
@@ -65,7 +62,7 @@ fn get_statuses(updaters: &UserUpdaters, config: &UserConfigForUpdater) -> UserU
 }
 
 async fn loop_logic(config: &UserConfigForUpdater, updaters: &mut UserUpdaters) -> Result<()> {
-    let fronts = simply_plural::fetch_fronts(config).await?;
+    let fronts = plurality::fetch_fronts(config).await?;
 
     for updater in updaters.values_mut() {
         if updater.enabled(config) {

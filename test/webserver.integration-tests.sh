@@ -55,9 +55,9 @@ check_system_fronts_set() {
 export BASE_URL="http://localhost:8000"
 
 SYSTEM_PUBLIC_NAME="SP-Updater-Test"
-ENABLE_DISCORD=false
+ENABLE_DISCORD_STATUS_MESSAGE=false
 ENABLE_VRCHAT=false
-unset DISCORD_TOKEN
+unset DISCORD_STATUS_MESSAGE_TOKEN
 unset VRCHAT_USERNAME
 unset VRCHAT_PASSWORD
 unset VRCHAT_COOKIE
@@ -65,9 +65,7 @@ unset VRCHAT_COOKIE
 start_webserver() {
     echo "start_webserver"
 
-    set -a; source release/config/server.defaults.env; set +a
-
-    ./docker/local.start.sh > /dev/null 2>&1
+    ./docker/local.start.sh > docker/logs/start.log 2>&1
 
     setup_test_user
 
@@ -76,7 +74,7 @@ start_webserver() {
 
 stop_webserver() {
     echo "stop_webserver"
-    ./docker/local.stop.sh > /dev/null 2>&1
+    ./docker/local.stop.sh > docker/logs/start.log 2>&1
     echo "Stopped webserver."
 }
 trap stop_webserver EXIT

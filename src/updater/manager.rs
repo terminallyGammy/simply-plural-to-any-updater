@@ -1,3 +1,4 @@
+use crate::setup;
 use crate::updater::work_loop;
 use crate::users;
 use crate::users::UserId;
@@ -12,13 +13,15 @@ type ThreadSafePerUser<T> = SharedMutable<HashMap<UserId, T>>;
 pub struct UpdaterManager {
     pub tasks: ThreadSafePerUser<work_loop::CancleableUpdater>,
     pub statuses: ThreadSafePerUser<work_loop::UserUpdatersStatuses>,
+    pub discord_status_message_available: bool,
 }
 
 impl UpdaterManager {
-    pub fn new() -> Self {
+    pub fn new(cli_args: &setup::CliArgs) -> Self {
         Self {
             tasks: Arc::new(Mutex::new(HashMap::new())),
             statuses: Arc::new(Mutex::new(HashMap::new())),
+            discord_status_message_available: cli_args.discord_status_message_updater_available,
         }
     }
 

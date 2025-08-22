@@ -26,7 +26,7 @@ pub async fn application_setup(cli_args: &CliArgs) -> Result<ApplicationSetup> {
         inner: cli_args.application_user_secrets.clone(),
     };
 
-    let shared_updaters = updater::UpdaterManager::new();
+    let shared_updaters = updater::UpdaterManager::new(cli_args);
 
     Ok(ApplicationSetup {
         db_pool,
@@ -40,17 +40,20 @@ pub async fn application_setup(cli_args: &CliArgs) -> Result<ApplicationSetup> {
 #[derive(Parser, Debug, Clone, Default)]
 #[clap(author, version, about, long_about = None)]
 pub struct CliArgs {
-    #[arg(long)]
+    #[arg(long, env)]
     pub database_url: String,
 
-    #[arg(short, long, default_value_t = 5)]
+    #[arg(short, long, env, default_value_t = 5)]
     pub request_timeout: u64,
 
-    #[arg(short, long)]
+    #[arg(short, long, env)]
     pub jwt_application_secret: String,
 
-    #[arg(short, long)]
+    #[arg(short, long, env)]
     pub application_user_secrets: String,
+
+    #[arg(short, long, env, default_value_t = false, action = clap::ArgAction::SetTrue)]
+    pub discord_status_message_updater_available: bool,
 }
 
 #[derive(Clone)]

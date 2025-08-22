@@ -17,10 +17,11 @@ pub async fn run_loop(
 ) -> ! {
     eprintln!("Running Updater ...");
 
-    let mut updaters: UserUpdaters = platforms::implemented_updaters()
-        .iter()
-        .map(|platform| (platform.to_owned(), Updater::new(platform.to_owned())))
-        .collect();
+    let mut updaters: UserUpdaters =
+        platforms::available_updaters(shared_updaters.discord_status_message_available)
+            .iter()
+            .map(|platform| (platform.to_owned(), Updater::new(platform.to_owned())))
+            .collect();
 
     for u in updaters.values_mut() {
         if u.enabled(&config) {

@@ -13,10 +13,10 @@ source docker/source.sh # await
 
 get_user_config_json() {
 
-    if [ -v DISCORD_TOKEN ] ; then 
-        DISCORD_TOKEN_LINE="\"discord_token\": { \"secret\": \"${DISCORD_TOKEN}\" },"
+    if [ -v DISCORD_STATUS_MESSAGE_TOKEN ] ; then 
+        DISCORD_STATUS_MESSAGE_TOKEN_LINE="\"discord_status_message_token\": { \"secret\": \"${DISCORD_STATUS_MESSAGE_TOKEN}\" },"
     else
-        DISCORD_TOKEN_LINE=""
+        DISCORD_STATUS_MESSAGE_TOKEN_LINE=""
     fi
 
     if [ -v SPS_API_TOKEN ] ; then
@@ -44,10 +44,10 @@ get_user_config_json() {
     fi
 
     echo "{
-        \"enable_discord\": ${ENABLE_DISCORD},
+        \"enable_discord_status_message\": ${ENABLE_DISCORD_STATUS_MESSAGE},
         \"enable_vrchat\": ${ENABLE_VRCHAT},
         $SIMPLY_PLURAL_TOKEN_LINE
-        $DISCORD_TOKEN_LINE
+        $DISCORD_STATUS_MESSAGE_TOKEN_LINE
         $VRCHAT_USERNAME_LINE
         $VRCHAT_PASSWORD_LINE
         $VRCHAT_COOKIE_LINE

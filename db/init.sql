@@ -24,12 +24,12 @@ CREATE TABLE IF NOT EXISTS users (
     status_no_fronts TEXT,
     status_truncate_names_to INTEGER CHECK (status_truncate_names_to > 0),
     
-    enable_discord BOOLEAN NOT NULL DEFAULT false,
+    enable_discord_status_message BOOLEAN NOT NULL DEFAULT false,
     enable_vrchat BOOLEAN NOT NULL DEFAULT false,
     
     /* encrypted secrets. need to be re-encrypted, when password changes. */
     enc__simply_plural_token bytea,
-    enc__discord_token bytea,
+    enc__discord_status_message_token bytea,
     enc__vrchat_username bytea,
     enc__vrchat_password bytea,
     enc__vrchat_cookie bytea

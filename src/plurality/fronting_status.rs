@@ -156,4 +156,3 @@ pub fn clean_name_for_vrchat_status(dirty_name: &str) -> String {
         .collect::<Vec<&str>>()
         .join(" ")
 }
-

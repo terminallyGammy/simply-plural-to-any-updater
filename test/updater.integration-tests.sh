@@ -12,9 +12,10 @@ set -euo pipefail
 
 [[ "$VRCHAT_COOKIE" != "" ]]
 
-[[ "$DISCORD_TOKEN" != "" ]]
+[[ "$DISCORD_STATUS_MESSAGE_TOKEN" != "" ]]
 
-ENABLE_DISCORD=true
+export DISCORD_STATUS_MESSAGE_UPDATER_AVAILABLE=true
+ENABLE_DISCORD_STATUS_MESSAGE=true
 ENABLE_VRCHAT=true
 
 source ./test/source.sh
@@ -76,7 +77,7 @@ check_discord_status_string_equals() {
 
     RESPONSE="$(curl -s \
         "https://discord.com/api/v10/users/@me/settings" \
-        -H "Authorization: $DISCORD_TOKEN"
+        -H "Authorization: $DISCORD_STATUS_MESSAGE_TOKEN"
     )"
 
     STATUS="$( echo "$RESPONSE" | jq -r .custom_status.text )"
@@ -91,7 +92,7 @@ export BASE_URL="http://localhost:8000"
 
 start_updater() {
     echo "start_updater"
-    ./docker/local.start.sh > /dev/null 2>&1
+    ./docker/local.start.sh > docker/logs/start.log 2>&1
 
     setup_test_user
 
@@ -104,7 +105,7 @@ start_updater() {
 
 stop_updater() {
     echo "stop_updater"
-    ./docker/local.stop.sh > /dev/null 2>&1
+    ./docker/local.stop.sh > docker/logs/stop.log 2>&1
     echo "Stopped Updater."
 }
 trap stop_updater EXIT

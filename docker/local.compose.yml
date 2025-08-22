@@ -7,9 +7,13 @@ services:
       context: ..
       args:
         PATH_TO_EXEC: ../target/release/sp2any
-    env_file:
-      - ../release/config/server.defaults.env
-    command: "--database-url postgres://postgres:postgres@localhost:5432/sp2any --jwt-application-secret ${JWT_APPLICATION_SECRET} --application-user-secrets ${APPLICATION_USER_SECRETS}"
+    environment:
+      JWT_APPLICATION_SECRET: "${JWT_APPLICATION_SECRET}"
+      DATABASE_URL: "postgres://postgres:postgres@localhost:5432/sp2any"
+      APPLICATION_USER_SECRETS: "${APPLICATION_USER_SECRETS}"
+      DISCORD_STATUS_MESSAGE_UPDATER_AVAILABLE: "${DISCORD_STATUS_MESSAGE_UPDATER_AVAILABLE-false}"
+      ROCKET_ADDRESS: "0.0.0.0"
+      ROCKET_PORT: 8000
     network_mode: host
     # ports:
     #   - 8000:8000

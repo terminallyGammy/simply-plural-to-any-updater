@@ -12,10 +12,10 @@ struct Status {
     text: String,
 }
 
-pub struct DiscordUpdater {
+pub struct DiscordStatusMessageUpdater {
     pub last_operation_error: Option<String>,
 }
-impl DiscordUpdater {
+impl DiscordStatusMessageUpdater {
     pub const fn new(_platform: updater::Platform) -> Self {
         Self {
             last_operation_error: None,
@@ -75,7 +75,7 @@ async fn set_discord_status(
     let result: User = config
         .client
         .patch(discord_status_url)
-        .header("Authorization", &config.discord_token.secret)
+        .header("Authorization", &config.discord_status_message_token.secret)
         .header("Content-Type", "application/json")
         .body(serde_json::to_string(&body)?)
         .send()

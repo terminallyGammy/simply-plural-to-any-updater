@@ -41,5 +41,6 @@ jsonwebtoken = "9.3"
 rand = "0.9"
 sha2 = "0.10"
 rocket = { version = "0.5", features = ["json"] }
+serenity = "0.12"
 
 [build-dependencies]

@@ -139,6 +139,7 @@ The strategy is to make your Rust code the single source of truth for any data s
   * using [free managed postgres](https://www.bytebase.com/blog/postgres-hosting-options-pricing-comparison/) with free tier serverless functions?
   * alternatively a mixture of the above?
 * test vrchat login: user+pwd and user+pwd+2fa
+* what about a mobile app? that can run 24/7 indeed AND people can securely store their data there without needing to trust me.
 
 #### User Feedback
 * discord rich presence / activity as instead of discord status

@@ -6,6 +6,7 @@ use anyhow::Result;
 
 use clap::Parser;
 
+mod config_file;
 mod database;
 mod http;
 mod platforms;
@@ -16,6 +17,10 @@ mod users;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Ensure that the local configuration file exists before continuing so
+    // the executable can be run without manually creating it beforehand.
+    let _ = config_file::ensure_config_file()?;
+
     let cli_args = setup::CliArgs::parse();
 
     let app_setup = setup::application_setup(&cli_args).await?;
